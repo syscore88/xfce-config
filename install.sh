@@ -139,6 +139,58 @@ else
     echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/99-temp-installer > /dev/null
 fi
 
+XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
+
+detect_distro() {
+    local id="" id_like=""
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        id="${ID:-}"
+        id_like="${ID_LIKE:-}"
+    fi
+    case " $id $id_like " in
+        *arch*|*manjaro*|*endeavouros*) echo "arch" ;;
+        *debian*|*ubuntu*) echo "debian" ;;
+        *opensuse*|*suse*) echo "opensuse" ;;
+        *fedora*|*rhel*) echo "fedora" ;;
+        *) echo "unknown" ;;
+    esac
+}
+DISTRO_ID="$(detect_distro)"
+
+case "$DISTRO_ID" in
+    arch)
+        PKG_INSTALL_CMD=(sudo pacman -S --noconfirm --needed)
+        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        ;;
+    debian)
+        sudo apt-get update -y >/dev/null 2>&1 || true
+        PKG_INSTALL_CMD=(sudo apt-get install -y)
+        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        ;;
+    opensuse)
+        PKG_INSTALL_CMD=(sudo zypper --non-interactive install)
+        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        ;;
+    fedora)
+        PKG_INSTALL_CMD=(sudo dnf install -y)
+        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        ;;
+    *)
+        PKG_INSTALL_CMD=()
+        XFCE_PKGS=()
+        ;;
+esac
+
+if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
+    echo -e "${INFO}==> $(pick_msg "Instalowanie wtyczek XFCE ($DISTRO_ID)..." "Installing XFCE plugins ($DISTRO_ID)...")${NC}" >&3
+    for pkg in "${XFCE_PKGS[@]}"; do
+        "${PKG_INSTALL_CMD[@]}" "$pkg" || true
+    done
+else
+    echo -e "${WARN}⚠ $(pick_msg "Nieznana dystrybucja, pomijam instalację pakietów." "Unknown distribution, skipping package installation.")${NC}" >&3
+fi
+
 # ==========================================================
 # 1. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
 # ==========================================================
