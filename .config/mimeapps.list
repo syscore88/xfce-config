@@ -1,8 +1,24 @@
 [Default Applications]
 x-scheme-handler/mailto=xfce4-mail-reader.desktop
 text/plain=org.xfce.mousepad.desktop
+application/x-bat=org.xfce.mousepad.desktop
+application/xml=org.xfce.mousepad.desktop
+text/xml=org.xfce.mousepad.desktop
+text/markdown=org.xfce.mousepad.desktop
+text/csv=org.xfce.mousepad.desktop
+text/html=org.xfce.mousepad.desktop
+application/vnd.ms-excel=org.xfce.mousepad.desktop
+application/x-sharedlib=org.xfce.mousepad.desktop
 
 [Added Associations]
 x-scheme-handler/mailto=xfce4-mail-reader.desktop;
 text/x-log=org.xfce.mousepad.desktop;
 text/plain=org.xfce.mousepad.desktop;
+application/x-bat=org.xfce.mousepad.desktop;
+application/xml=org.xfce.mousepad.desktop;
+text/xml=org.xfce.mousepad.desktop;
+text/markdown=org.xfce.mousepad.desktop;
+text/csv=org.xfce.mousepad.desktop;
+text/html=org.xfce.mousepad.desktop;
+application/vnd.ms-excel=org.xfce.mousepad.desktop;
+application/x-sharedlib=org.xfce.mousepad.desktop;
