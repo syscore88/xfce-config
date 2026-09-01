@@ -1,0 +1,8 @@
+[Default Applications]
+x-scheme-handler/mailto=xfce4-mail-reader.desktop
+text/plain=org.xfce.mousepad.desktop
+
+[Added Associations]
+x-scheme-handler/mailto=xfce4-mail-reader.desktop;
+text/x-log=org.xfce.mousepad.desktop;
+text/plain=org.xfce.mousepad.desktop;
