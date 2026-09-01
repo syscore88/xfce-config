@@ -183,12 +183,9 @@ case "$DISTRO_ID" in
 esac
 
 if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
-    echo -e "${INFO}==> $(pick_msg "Instalowanie wtyczek XFCE ($DISTRO_ID)..." "Installing XFCE plugins ($DISTRO_ID)...")${NC}" >&3
     for pkg in "${XFCE_PKGS[@]}"; do
         "${PKG_INSTALL_CMD[@]}" "$pkg" || true
     done
-else
-    echo -e "${WARN}⚠ $(pick_msg "Nieznana dystrybucja, pomijam instalację pakietów." "Unknown distribution, skipping package installation.")${NC}" >&3
 fi
 
 # ==========================================================
