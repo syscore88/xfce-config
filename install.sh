@@ -43,12 +43,6 @@ cleanup_on_exit() {
             echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
         fi
     fi
-    if [[ "${USE_RUN0:-0}" -eq 1 ]]; then
-        sudo rm -f "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" 2>/dev/null || true
-        sudo systemctl try-restart polkit 2>/dev/null || true
-    else
-        sudo rm -f /etc/sudoers.d/99-temp-installer 2>/dev/null || true
-    fi
     rm -f "$TMP_LOG" 2>/dev/null || true
 }
 trap cleanup_on_exit EXIT
