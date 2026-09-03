@@ -274,6 +274,18 @@ if [[ -n "$SESSION_PID" ]] && command -v xfconf-query >/dev/null 2>&1; then
         DESKTOP_PROPS=("/backdrop/screen0/monitor0/workspace0/last-image")
     fi
 
+    # XFCE od pewnych wersji adresuje monitory po realnej nazwie wyjścia
+    # (np. monitoreDP-1) zamiast monitor0/monitor1. Skopiowany .config mógł
+    # pochodzić z innej maszyny z innymi nazwami wyjść, więc dokładamy
+    # właściwości dla WSZYSTKICH aktualnie podłączonych monitorów, aby mieć
+    # pewność trafienia we właściwy klucz.
+    if command -v xrandr >/dev/null 2>&1; then
+        while IFS= read -r out; do
+            [[ -n "$out" ]] && DESKTOP_PROPS+=("/backdrop/screen0/monitor$out/workspace0/last-image")
+        done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}')
+        mapfile -t DESKTOP_PROPS < <(printf '%s\n' "${DESKTOP_PROPS[@]}" | sort -u)
+    fi
+
     if [[ -d ~/.cache/xfce4/desktop ]]; then
         find ~/.cache/xfce4/desktop -type f -iname "*$(basename "$wallpaper_PATH")*" -delete 2>/dev/null || true
     fi
@@ -327,6 +339,9 @@ fi
 show_progress 4 $TOTAL_STEPS "$MSG_PHASE_2"
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
+    cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
+    chmod 644 "$HOME/.face" 2>/dev/null || true
+
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
 
     sudo cp -af "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" 2>/dev/null \
