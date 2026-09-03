@@ -461,7 +461,7 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
 fi
 
 # ==========================================
-# 8. Czyszczenie tymczasowych uprawnień i pamięci podręcznej
+# 8. Zakończenie i sprzątanie
 # ==========================================
 if [[ "$USE_RUN0" -eq 1 ]]; then
     sudo rm -f "$RUN0_NOPASSWD_FILE"
@@ -495,5 +495,4 @@ else
     echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}"
 fi
 
-# Reboot systemu
 systemctl reboot
