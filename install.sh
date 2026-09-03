@@ -1,10 +1,13 @@
 #!/bin/bash
+# ==========================================================
+# SKRYPT KONFIGURACJI WIZUALNEJ XFCE
+# ==========================================================
 
 set -Eeuo pipefail
 export PATH="/usr/sbin:/sbin:$PATH"
 
 # ==========================================
-# 1. Wykrywanie języka systemu i zmienne
+# 1. WYKRYWANIE JĘZYKA SYSTEMU I ZMIENNE
 # ==========================================
 detect_system_lang() { 
     local sys_lang="${LANG:-}"
@@ -77,7 +80,7 @@ wallpaper_PATH="$USER_PICTURES_DIR/wallpaper.jpg"
 LOGIN_WALLPAPER_PATH="/usr/share/backgrounds/login-wallpaper.png"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Walidacja użytkownika
+# WALIDACJA UŻYTKOWNIKA
 if [[ "$EUID" -eq 0 ]]; then
     if [[ "$SCRIPT_LANG" == "pl" ]]; then
         echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}"
@@ -88,7 +91,7 @@ if [[ "$EUID" -eq 0 ]]; then
 fi
 
 # ==========================================
-# 2. Uprawnienia tymczasowe (sudo / polkit)
+# 2. UPRAWNIENIA TYMCZASOWE (SUDO / POLKIT)
 # ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
@@ -121,7 +124,7 @@ fi
 show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
 
 # ==========================================
-# 3. Wykrywanie dystrybucji i instalacja pakietów
+# 3. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
 # ==========================================
 XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
 
@@ -173,7 +176,7 @@ if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
 fi
 
 # ==========================================
-# 4. Kopiowanie plików konfiguracyjnych
+# 4. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
 # ==========================================
 safe_copy_dir() {
     local src="$1" dst="$2"
@@ -207,7 +210,6 @@ safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
 
 show_progress 1 $TOTAL_STEPS "$MSG_PHASE_1"
 
-# Podmiana ścieżek użytkownika w plikach konfiguracyjnych
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]] && [[ "$(realpath "$SCRIPT_DIR/wallpaper.jpg")" != "$(realpath "$wallpaper_PATH" 2>/dev/null)" ]]; then
     mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null \
         && cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
@@ -225,7 +227,7 @@ show_progress 2 $TOTAL_STEPS "$MSG_PHASE_1"
 show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
 
 # ==========================================
-# 5. Ustawienie tapety pulpitowej
+# 5. USTAWIENIE TAPETY PULPITOWEJ
 # ==========================================
 chmod 644 "$wallpaper_PATH" 2>/dev/null || true
 
@@ -308,7 +310,7 @@ fi
 show_progress 4 $TOTAL_STEPS "$MSG_PHASE_2"
 
 # ==========================================
-# 6. Ustawianie awatara użytkownika
+# 6. USTAWIENIE AWATARA UŻYTKOWNIKA
 # ==========================================
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
@@ -348,7 +350,7 @@ fi
 show_progress 5 $TOTAL_STEPS "$MSG_PHASE_3"
 
 # ==========================================
-# 7. Konfiguracja ekranu logowania (LightDM)
+# 7. KONFIGURACJA EKRANU LOGOWANIA (LIGHTDM)
 # ==========================================
 detect_display_manager() {
     local dm=""
@@ -461,7 +463,7 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
 fi
 
 # ==========================================
-# 8. Zakończenie i sprzątanie
+# 8. ZAKOŃCZENIE I SPRZĄTANIE
 # ==========================================
 if [[ "$USE_RUN0" -eq 1 ]]; then
     sudo rm -f "$RUN0_NOPASSWD_FILE"
