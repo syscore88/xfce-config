@@ -1,11 +1,11 @@
 #!/bin/bash
-# ==========================================================
-# KOMPLEKSOWY SKRYPT KONFIGURACYJNY SYSTEMU (XFCE)
-# ==========================================================
 
 set -Eeuo pipefail
 export PATH="/usr/sbin:/sbin:$PATH"
 
+# ==========================================
+# 1. Wykrywanie języka systemu i zmienne
+# ==========================================
 detect_system_lang() { 
     local sys_lang="${LANG:-}"
     [[ -z "$sys_lang" ]] && sys_lang="${LC_ALL:-${LC_MESSAGES:-}}"
@@ -19,41 +19,9 @@ SCRIPT_LANG="$(detect_system_lang)"
 
 SUCCESS='\033[0;32m'
 ERR='\033[0;31m'
-INFO='\033[0;36m'
-WARN='\033[0;33m'
 NC='\033[0m'
 
-TMP_LOG="$(mktemp /tmp/install-log.XXXXXX)"
-LOG_FILE="$HOME/install_error_$(date +%Y%m%d_%H%M%S).log"
-
-exec 3>&1
-exec >>"$TMP_LOG" 2>&1
-
-printf '\033[?7l' >&3
-
-cleanup_on_exit() {
-    local exit_code=$?
-    printf '\033[?7h' >&3
-    if [ "$exit_code" -ne 0 ]; then
-        echo -e "\n" >&3
-        cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
-        if [[ "$SCRIPT_LANG" == "pl" ]]; then
-            echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
-        else
-            echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
-        fi
-    fi
-    rm -f "$TMP_LOG" 2>/dev/null || true
-}
-trap cleanup_on_exit EXIT
-
-pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
-log_info() { local m; m="$(pick_msg "$1" "$2")"; echo -e "${INFO}==> $m${NC}"; }
-log_ok()   { local m; m="$(pick_msg "$1" "$2")"; echo -e "${SUCCESS}✔ $m${NC}"; }
-log_err()  { local m; m="$(pick_msg "$1" "$2")"; echo -e "${ERR}✘ ERROR: $m${NC}"; }
-log_warn() { local m; m="$(pick_msg "$1" "$2")"; echo -e "${WARN}⚠ WARN: $m${NC}"; }
-
-trap 'log_err "Błąd w linii $LINENO. Polecenie: $BASH_COMMAND" "Error at line $LINENO. Command: $BASH_COMMAND"' ERR
+printf '\033[?7l'
 
 show_progress() {
     local step=$1
@@ -87,7 +55,7 @@ show_progress() {
     if [ $filled -gt 0 ]; then printf -v bar_filled '%*s' "$filled" ''; bar_filled="${bar_filled// /#}"; fi
     if [ $empty -gt 0 ]; then printf -v bar_empty '%*s' "$empty" ''; bar_empty="${bar_empty// /-}"; fi
 
-    printf "\r\033[K[\033[1;32m%s\033[0;90m%s\033[0m] %3d%% | \033[1;36m%s\033[0m" "$bar_filled" "$bar_empty" "$percent" "$msg" >&3
+    printf "\r\033[K[\033[1;32m%s\033[0;90m%s\033[0m] %3d%% | \033[1;36m%s\033[0m" "$bar_filled" "$bar_empty" "$percent" "$msg"
 }
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
@@ -109,15 +77,19 @@ wallpaper_PATH="$USER_PICTURES_DIR/wallpaper.jpg"
 LOGIN_WALLPAPER_PATH="/usr/share/backgrounds/login-wallpaper.png"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Walidacja użytkownika
 if [[ "$EUID" -eq 0 ]]; then
     if [[ "$SCRIPT_LANG" == "pl" ]]; then
-        echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}" >&3
+        echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}"
     else
-        echo -e "${ERR}✘ Do not run this script as root. Run as a normal user with sudo.${NC}" >&3
+        echo -e "${ERR}✘ Do not run this script as root. Run as a normal user with sudo.${NC}"
     fi
     exit 1
 fi
 
+# ==========================================
+# 2. Uprawnienia tymczasowe (sudo / polkit)
+# ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
 if ! command -v visudo >/dev/null 2>&1 || sudo --version 2>/dev/null | grep -qi "run0"; then
@@ -137,15 +109,20 @@ else
     else
         rm -f "$SUDOERS_TMP"
         if [[ "$SCRIPT_LANG" == "pl" ]]; then
-            echo -e "${ERR}✘ Nieprawidłowa składnia reguły sudoers - przerywam.${NC}" >&3
+            echo -e "${ERR}✘ Nieprawidłowa składnia reguły sudoers - przerywam.${NC}"
         else
-            echo -e "${ERR}✘ Invalid sudoers rule syntax - aborting.${NC}" >&3
+            echo -e "${ERR}✘ Invalid sudoers rule syntax - aborting.${NC}"
         fi
         exit 1
     fi
     rm -f "$SUDOERS_TMP"
 fi
 
+show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
+
+# ==========================================
+# 3. Wykrywanie dystrybucji i instalacja pakietów
+# ==========================================
 XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
 
 detect_distro() {
@@ -191,17 +168,14 @@ esac
 
 if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
     for pkg in "${XFCE_PKGS[@]}"; do
-        "${PKG_INSTALL_CMD[@]}" "$pkg" || true
+        "${PKG_INSTALL_CMD[@]}" "$pkg" >/dev/null 2>&1 || true
     done
 fi
 
-# ==========================================================
-# 1. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
-# ==========================================================
-show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
-
+# ==========================================
+# 4. Kopiowanie plików konfiguracyjnych
+# ==========================================
 safe_copy_dir() {
-    # $1 = katalog źródłowy, $2 = katalog docelowy
     local src="$1" dst="$2"
     if [[ -d "$src" ]] && [[ "$(realpath "$src" 2>/dev/null)" != "$(realpath "$dst" 2>/dev/null)" ]]; then
         mkdir -p "$dst" 2>/dev/null || return 0
@@ -233,6 +207,7 @@ safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
 
 show_progress 1 $TOTAL_STEPS "$MSG_PHASE_1"
 
+# Podmiana ścieżek użytkownika w plikach konfiguracyjnych
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]] && [[ "$(realpath "$SCRIPT_DIR/wallpaper.jpg")" != "$(realpath "$wallpaper_PATH" 2>/dev/null)" ]]; then
     mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null \
         && cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
@@ -247,12 +222,11 @@ fi
 start_xfce_components
 
 show_progress 2 $TOTAL_STEPS "$MSG_PHASE_1"
-
-# ==========================================================
-# 2. KONFIGURACJA ŚRODOWISKA XFCE I AVATARA
-# ==========================================================
 show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
 
+# ==========================================
+# 5. Ustawienie tapety pulpitowej
+# ==========================================
 chmod 644 "$wallpaper_PATH" 2>/dev/null || true
 
 SESSION_PID=$(pgrep -u "$CURRENT_USER" xfce4-session | head -n 1 || true)
@@ -274,11 +248,6 @@ if [[ -n "$SESSION_PID" ]] && command -v xfconf-query >/dev/null 2>&1; then
         DESKTOP_PROPS=("/backdrop/screen0/monitor0/workspace0/last-image")
     fi
 
-    # XFCE od pewnych wersji adresuje monitory po realnej nazwie wyjścia
-    # (np. monitoreDP-1) zamiast monitor0/monitor1. Skopiowany .config mógł
-    # pochodzić z innej maszyny z innymi nazwami wyjść, więc dokładamy
-    # właściwości dla WSZYSTKICH aktualnie podłączonych monitorów, aby mieć
-    # pewność trafienia we właściwy klucz.
     if command -v xrandr >/dev/null 2>&1; then
         while IFS= read -r out; do
             [[ -n "$out" ]] && DESKTOP_PROPS+=("/backdrop/screen0/monitor$out/workspace0/last-image")
@@ -338,6 +307,9 @@ fi
 
 show_progress 4 $TOTAL_STEPS "$MSG_PHASE_2"
 
+# ==========================================
+# 6. Ustawianie awatara użytkownika
+# ==========================================
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
     chmod 644 "$HOME/.face" 2>/dev/null || true
@@ -373,11 +345,11 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     fi
 fi
 
-# ==========================================================
-# 3. KONFIGURACJA EKRANU LOGOWANIA I UPRAWNIEŃ ROOTA
-# ==========================================================
 show_progress 5 $TOTAL_STEPS "$MSG_PHASE_3"
 
+# ==========================================
+# 7. Konfiguracja ekranu logowania (LightDM)
+# ==========================================
 detect_display_manager() {
     local dm=""
     if [[ -f /etc/X11/default-display-manager ]]; then
@@ -488,6 +460,9 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     fi
 fi
 
+# ==========================================
+# 8. Czyszczenie tymczasowych uprawnień i pamięci podręcznej
+# ==========================================
 if [[ "$USE_RUN0" -eq 1 ]]; then
     sudo rm -f "$RUN0_NOPASSWD_FILE"
     sudo systemctl try-restart polkit 2>/dev/null || true
@@ -510,12 +485,15 @@ clear_xfce_cache() {
 clear_xfce_cache
 
 show_progress 6 $TOTAL_STEPS "$MSG_PHASE_3"
-echo -e "\n" >&3
+echo -e "\n"
+
+printf '\033[?7h'
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    echo -e "${SUCCESS}✔ KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}" >&3
+    echo -e "${SUCCESS}✔ KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}"
 else
-    echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}" >&3
+    echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}"
 fi
 
-systemctl reboot || true
+# Reboot systemu
+systemctl reboot
