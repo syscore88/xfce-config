@@ -52,7 +52,7 @@ chmod +x install.sh
 
 [![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/bartekszczecinski)
 
-<img width="1280" height="800" alt="Screenshot_debian13_2026-08-31_17:04:18" src="https://github.com/user-attachments/assets/e31a9d85-dfc7-4817-baab-1b59d26fc602" />
+<img width="1280" height="800" alt="Screenshot_debian13_2026-09-03_14:04:57" src="https://github.com/user-attachments/assets/124b42f0-d6c2-4dfd-823f-cbedcc28e82d" />
 
 If you find this project useful, leave a star! ⭐
 
