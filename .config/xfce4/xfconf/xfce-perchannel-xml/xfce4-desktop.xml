@@ -8,9 +8,7 @@
         <property name="color1" type="empty"/>
         <property name="color2" type="empty"/>
         <property name="color-style" type="empty"/>
-        <property name="image-path" type="string" value="/home/bartek/Obrazy/wallpaper.jpg"/>
         <property name="image-show" type="empty"/>
-        <property name="last-image" type="string" value="/home/bartek/Obrazy/wallpaper.jpg"/>
         <property name="last-single-image" type="empty"/>
         <property name="image-style" type="int" value="5"/>
       </property>
@@ -19,9 +17,7 @@
         <property name="color1" type="empty"/>
         <property name="color2" type="empty"/>
         <property name="color-style" type="empty"/>
-        <property name="image-path" type="string" value="/home/bartek/Obrazy/wallpaper.jpg"/>
         <property name="image-show" type="empty"/>
-        <property name="last-image" type="string" value="/home/bartek/Obrazy/wallpaper.jpg"/>
         <property name="last-single-image" type="empty"/>
         <property name="image-style" type="int" value="5"/>
       </property>
