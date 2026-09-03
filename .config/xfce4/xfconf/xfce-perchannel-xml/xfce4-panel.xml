@@ -1,0 +1,194 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=8;x=640;y=782"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="35"/>
+      <property name="background-style" type="empty"/>
+      <property name="background-alpha" type="empty"/>
+      <property name="enter-opacity" type="uint" value="85"/>
+      <property name="leave-opacity" type="uint" value="70"/>
+      <property name="icon-size" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="7"/>
+        <value type="int" value="4"/>
+        <value type="int" value="22"/>
+        <value type="int" value="18"/>
+        <value type="int" value="5"/>
+        <value type="int" value="13"/>
+        <value type="int" value="16"/>
+        <value type="int" value="6"/>
+        <value type="int" value="19"/>
+        <value type="int" value="20"/>
+        <value type="int" value="8"/>
+        <value type="int" value="3"/>
+        <value type="int" value="15"/>
+        <value type="int" value="12"/>
+        <value type="int" value="9"/>
+        <value type="int" value="17"/>
+        <value type="int" value="21"/>
+      </property>
+    </property>
+    <property name="dark-mode" type="bool" value="true"/>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-4" type="string" value="pager">
+      <property name="items" type="empty"/>
+      <property name="rows" type="uint" value="2"/>
+      <property name="miniature-view" type="bool" value="true"/>
+    </property>
+    <property name="plugin-5" type="string" value="separator">
+      <property name="items" type="empty"/>
+      <property name="style" type="uint" value="0"/>
+      <property name="expand" type="bool" value="true"/>
+    </property>
+    <property name="plugin-6" type="string" value="systray">
+      <property name="show-handle" type="empty"/>
+      <property name="middle-click" type="empty"/>
+      <property name="square-icons" type="bool" value="true"/>
+      <property name="known-legacy-items" type="array">
+        <value type="string" value="aplet networkmanager"/>
+      </property>
+      <property name="single-row" type="bool" value="true"/>
+      <property name="menu-is-primary" type="bool" value="true"/>
+      <property name="symbolic-icons" type="bool" value="true"/>
+    </property>
+    <property name="plugin-8" type="string" value="clock">
+      <property name="icon-size" type="empty"/>
+      <property name="names-visible" type="empty"/>
+      <property name="show-frame" type="empty"/>
+      <property name="digital-time-format" type="string" value="%T"/>
+      <property name="digital-layout" type="uint" value="1"/>
+      <property name="digital-date-format" type="string" value="%Y %B %d"/>
+    </property>
+    <property name="plugin-9" type="string" value="separator">
+      <property name="style" type="uint" value="0"/>
+    </property>
+    <property name="plugin-24" type="string" value="weather">
+      <property name="location" type="empty">
+        <property name="name" type="string" value="Łaziska Górne, Poland"/>
+        <property name="latitude" type="string" value="50.144100"/>
+        <property name="longitude" type="string" value="18.867500"/>
+      </property>
+      <property name="msl" type="int" value="288"/>
+      <property name="timezone" type="string" value="Europe/Warsaw"/>
+      <property name="offset" type="string" value="+02:00"/>
+      <property name="cache-max-age" type="int" value="172800"/>
+      <property name="power-saving" type="bool" value="true"/>
+      <property name="units" type="empty">
+        <property name="temperature" type="int" value="0"/>
+        <property name="pressure" type="int" value="0"/>
+        <property name="windspeed" type="int" value="0"/>
+        <property name="precipitation" type="int" value="0"/>
+        <property name="altitude" type="int" value="0"/>
+        <property name="apparent-temperature" type="int" value="0"/>
+      </property>
+      <property name="round" type="bool" value="true"/>
+      <property name="single-row" type="bool" value="true"/>
+      <property name="tooltip-style" type="int" value="1"/>
+      <property name="forecast" type="empty">
+        <property name="layout" type="int" value="1"/>
+        <property name="days" type="int" value="5"/>
+      </property>
+      <property name="theme-dir" type="string" value="/usr/share/xfce4/weather/icons/liquid"/>
+      <property name="scrollbox" type="empty">
+        <property name="show" type="bool" value="true"/>
+        <property name="animate" type="bool" value="true"/>
+        <property name="lines" type="int" value="1"/>
+        <property name="color" type="string" value="rgba(0,0,0,0)"/>
+        <property name="use-color" type="bool" value="false"/>
+      </property>
+    </property>
+    <property name="plugin-27" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="17882242695.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-29" type="string" value="tasklist">
+      <property name="show-labels" type="bool" value="false"/>
+      <property name="switch-workspace-on-unminimize" type="bool" value="false"/>
+      <property name="show-wireframes" type="bool" value="true"/>
+    </property>
+    <property name="plugin-30" type="string" value="separator"/>
+    <property name="plugin-3" type="string" value="separator"/>
+    <property name="plugin-7" type="string" value="whiskermenu">
+      <property name="menu-opacity" type="int" value="85"/>
+      <property name="view-mode" type="int" value="1"/>
+      <property name="position-profile-alternate" type="bool" value="true"/>
+      <property name="position-categories-alternate" type="bool" value="true"/>
+      <property name="position-categories-horizontal" type="bool" value="true"/>
+      <property name="position-search-alternate" type="bool" value="true"/>
+      <property name="position-commands-alternate" type="bool" value="true"/>
+      <property name="button-icon" type="string" value="open-menu"/>
+      <property name="show-button-title" type="bool" value="true"/>
+      <property name="default-category" type="int" value="2"/>
+      <property name="hover-switch-category" type="bool" value="true"/>
+      <property name="recent-items-max" type="int" value="5"/>
+      <property name="confirm-session-command" type="bool" value="false"/>
+    </property>
+    <property name="plugin-12" type="string" value="weather">
+      <property name="location" type="empty">
+        <property name="name" type="string" value="Warszawa, województwo mazowieckie"/>
+        <property name="latitude" type="string" value="52.231958"/>
+        <property name="longitude" type="string" value="21.006725"/>
+      </property>
+      <property name="msl" type="int" value="135"/>
+      <property name="timezone" type="string" value="Europe/Warsaw"/>
+      <property name="offset" type="string" value="+02:00"/>
+      <property name="cache-max-age" type="int" value="172800"/>
+      <property name="power-saving" type="bool" value="true"/>
+      <property name="units" type="empty">
+        <property name="temperature" type="int" value="0"/>
+        <property name="pressure" type="int" value="0"/>
+        <property name="windspeed" type="int" value="0"/>
+        <property name="precipitation" type="int" value="0"/>
+        <property name="altitude" type="int" value="0"/>
+        <property name="apparent-temperature" type="int" value="2"/>
+      </property>
+      <property name="round" type="bool" value="true"/>
+      <property name="single-row" type="bool" value="true"/>
+      <property name="tooltip-style" type="int" value="1"/>
+      <property name="forecast" type="empty">
+        <property name="layout" type="int" value="1"/>
+        <property name="days" type="int" value="5"/>
+      </property>
+      <property name="theme-dir" type="string" value="/usr/share/xfce4/weather/icons/liquid"/>
+      <property name="scrollbox" type="empty">
+        <property name="show" type="bool" value="true"/>
+        <property name="animate" type="bool" value="true"/>
+        <property name="lines" type="int" value="1"/>
+        <property name="color" type="string" value="rgba(0,0,0,0)"/>
+        <property name="use-color" type="bool" value="false"/>
+      </property>
+    </property>
+    <property name="plugin-13" type="string" value="xfce4-clipman-plugin"/>
+    <property name="plugin-15" type="string" value="netload"/>
+    <property name="plugin-16" type="string" value="xfce4-notes-plugin"/>
+    <property name="notes" type="empty">
+      <property name="global" type="empty">
+        <property name="version" type="string" value="1.11.1"/>
+        <property name="background-color" type="string" value="#DAF188"/>
+      </property>
+    </property>
+    <property name="plugin-17" type="string" value="screenshooter"/>
+    <property name="plugin-18" type="string" value="tasklist">
+      <property name="show-labels" type="bool" value="false"/>
+      <property name="grouping" type="bool" value="false"/>
+      <property name="switch-workspace-on-unminimize" type="bool" value="false"/>
+      <property name="show-wireframes" type="bool" value="false"/>
+    </property>
+    <property name="plugin-19" type="string" value="wavelan"/>
+    <property name="plugin-20" type="string" value="power-manager-plugin"/>
+    <property name="plugin-21" type="string" value="notification-plugin"/>
+    <property name="plugin-22" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="17884353415.desktop"/>
+      </property>
+    </property>
+  </property>
+</channel>
