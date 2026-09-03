@@ -261,6 +261,12 @@ if [[ -n "$SESSION_PID" ]] && command -v xfconf-query >/dev/null 2>&1; then
     if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
         export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)
     fi
+    if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+        RUNTIME_DIR="/run/user/$(id -u "$CURRENT_USER" 2>/dev/null)"
+        if [[ -S "$RUNTIME_DIR/bus" ]]; then
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME_DIR/bus"
+        fi
+    fi
 
     mapfile -t DESKTOP_PROPS < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image$|image-path$" || true)
 
@@ -340,6 +346,14 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
             fi
         else
             { echo -e "[User]\nIcon=$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null; } 2>/dev/null || true
+        fi
+
+        sudo systemctl restart accounts-daemon 2>/dev/null || true
+        sleep 0.5
+        if command -v busctl >/dev/null 2>&1; then
+            busctl call org.freedesktop.Accounts \
+                "/org/freedesktop/Accounts/User$(id -u "$CURRENT_USER" 2>/dev/null)" \
+                org.freedesktop.Accounts.User SetIconFile s "$AVATAR_DEST" 2>/dev/null || true
         fi
     fi
 fi
