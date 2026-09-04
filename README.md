@@ -76,13 +76,14 @@ cd xfce-config
 ```bash
 chmod +x install.sh
 ```
----
 
 4. Run the script
 ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 ```bash
 ./install.sh
 ```
+---
+
 <img width="1280" height="800" alt="Screenshot_debian13_2026-09-03_14:04:57" src="https://github.com/user-attachments/assets/124b42f0-d6c2-4dfd-823f-cbedcc28e82d" />
 
 ### ☕ Support the Project
