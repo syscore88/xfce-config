@@ -1,28 +1,62 @@
-# 🚀 XFCE Environment Auto-Setup Script
+# 🐭 XFCE Visual Configuration Script
 
-A post-installation script (`install.sh`) that automates the process of personalizing a Linux system (with a focus on the **XFCE** desktop environment and **LightDM** display manager). It copies configuration files, applies themes, icons, wallpapers, and sets the user avatar.
+An automated Bash shell script designed for complete visual and environment configuration of the **XFCE** desktop across popular Linux distributions. The script installs a set of useful XFCE panel plugins, copies user configurations and themes, sets the desktop wallpaper live via `xfconf-query` (with an XML fallback), sets the user avatar, and configures the LightDM login screen wallpaper for whichever greeter is detected.
 
----
-
-## ✨ Features
-
-### 🎨 Visual Configuration (User)
-* **Dotfiles & config copy:** Transfers `.config`, `.local/share`, `.icons`, and `.themes` folders directly to your home directory (`~`).
-* **Automatic wallpaper setup:** Copies `tapeta.jpg` to `~/Documents` and applies it as the XFCE desktop background via `xfconf-query`.
-* **Path update (Username Fix):** Scans `.conf`, `.json`, and `.ini` files and automatically replaces any hardcoded paths referencing the old username (`bartek`) with your current system username.
-* **User avatar:** Sets `piwo.png` as your official system avatar via `AccountsService` integration.
-
-### ⚙️ System Configuration (Sudo)
-* **Login screen (LightDM):** Copies `login-wallpaper.png` to a secure system location and sets it as the greeter background in `lightdm-gtk-greeter.conf`.
-* **Sudo session keepalive:** The script requests the administrator password only once at the start, then automatically refreshes privileges in the background to prevent the process from stalling.
+The script auto-detects the system language (Polish/English) from the `LANG`/`LC_ALL` locale and prints all status messages accordingly.
 
 ---
 
-## 🔍 Prerequisites
+## 🚀 Script Features
 
-* A Linux-based operating system (**XFCE** desktop environment recommended).
-* **LightDM** display manager with `lightdm-gtk-greeter` installed.
-* A user account with `sudo` privileges.
+- **Automatic Linux Distribution Detection**: Support for Arch/Manjaro/EndeavourOS, Debian/Ubuntu, openSUSE/SUSE, and Fedora/RHEL, detected via `/etc/os-release`.
+- **Temporary Passwordless Sudo**: Requests the admin password once at the start, then configures a temporary `NOPASSWD` rule (via `/etc/sudoers.d/`, or a `polkit`/`run0` rule on systems without `visudo`) so the rest of the script can run unattended. The rule is automatically removed at the end of the script.
+- **XFCE Panel Plugins Installation**: Installs a common set of XFCE plugins: CPU Graph, Clipman, NetLoad, Mount, DiskPerf, Notes, Genmon, Wavelan, and `xfce4-screensaver`.
+- **Configuration Files Sync**:
+  - Copies `.config/`, `.local/`, `.icons/`, and `.themes/` folder contents into the corresponding folders in the user's home directory (skipped safely if source and destination are the same).
+  - Rewrites any leftover hardcoded paths from the original author's home directory (`/home/bartek`) to the current user's home directory inside `~/.config`.
+  - Temporarily pauses (`SIGSTOP`) and resumes (`SIGCONT`) the running XFCE panel/desktop/settings processes while files are copied.
+- **Live Wallpaper Application**: Applies `wallpaper.jpg` to the running XFCE session via `xfconf-query` for every detected monitor/workspace property (with an `xfce4-desktop.xml` fallback when no live session is found), then restarts `xfdesktop` to show the change immediately.
+- **User Avatar Setup**: Sets `~/.face`, the `AccountsService` icon, and (where available) notifies `accounts-daemon` over D-Bus so the new avatar is picked up without a restart.
+- **Login Screen Wallpaper (LightDM, any greeter)**: Detects the active display manager and, if it is LightDM, auto-detects the configured greeter (Slick, GTK, or WebKit2) and writes the background wallpaper into the matching greeter's config file.
+- **Cache Cleanup**: Clears XFCE desktop/panel cache, session cache, thumbnails, and icon cache, and rebuilds icon theme caches for any custom icon themes installed.
+- **Progress Bar**: Displays a live progress bar across 3 phases / 6 steps.
+
+---
+
+## 🐧 Supported Distributions
+
+The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and selects the corresponding package manager. The same plugin set is installed on every distribution:
+
+| Distribution | Package Manager |
+| :--- | :--- |
+| **Arch Linux / Manjaro / EndeavourOS** | `pacman` |
+| **Debian / Ubuntu** | `apt` (`apt-get update` runs first) |
+| **openSUSE / SUSE** | `zypper` |
+| **Fedora / RHEL** | `dnf` |
+
+**Installed plugins:** `xfce4-cpugraph-plugin`, `xfce4-clipman-plugin`, `xfce4-netload-plugin`, `xfce4-mount-plugin`, `xfce4-diskperf-plugin`, `xfce4-notes-plugin`, `xfce4-genmon-plugin`, `xfce4-wavelan-plugin`, `xfce4-screensaver`.
+
+---
+
+## 🔍 Module Details
+
+### 1. Permissions & Package Installation
+Verifies the script is **not** run as root, requests the sudo password once, grants a temporary `NOPASSWD` rule, detects the distribution, and installs the XFCE plugin set (each package failure is ignored so the script continues).
+
+### 2. Configuration Copy
+XFCE's panel, desktop, settings daemon, and config daemon processes are paused, `.config`, `.local`, `.icons`, and `.themes` are copied from the script directory into the user's home directory, old-username paths are rewritten inside `~/.config`, and the XFCE processes are resumed.
+
+### 3. Desktop Wallpaper
+If a live XFCE session is detected, the script talks to it directly through `xfconf-query` (discovering the D-Bus session bus if needed) and sets the wallpaper property for every screen/monitor/workspace combination, including any connected monitors reported by `xrandr`, then restarts `xfdesktop`. If no live session is found, it instead writes the setting directly into `xfce4-desktop.xml`.
+
+### 4. User Avatar (AccountsService)
+`piwo.png` is copied to `~/.face` and to `/var/lib/AccountsService/icons/$USER`; `/var/lib/AccountsService/users/$USER` is created or updated with the matching `Icon=` entry, `accounts-daemon` is restarted, and the icon is additionally pushed via a `busctl` D-Bus call when available.
+
+### 5. Login Screen Wallpaper (LightDM)
+The active display manager is detected (via `/etc/X11/default-display-manager`, `systemctl`, or a running `lightdm` process). If it's LightDM, the script identifies which greeter is configured (Slick Greeter, GTK Greeter, or WebKit2 Greeter — defaulting to GTK if none can be determined) and updates that greeter's config file (`slick-greeter.conf`, `lightdm-gtk-greeter.conf`, or `lightdm-webkit2-greeter.conf`) with the background image path.
+
+### 6. Finalization
+The temporary sudo/polkit rule is removed, XFCE and thumbnail caches are cleared, and the system automatically **reboots** (`systemctl reboot`) to apply all changes.
 
 ---
 
