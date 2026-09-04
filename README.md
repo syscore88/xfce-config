@@ -92,6 +92,8 @@ If you find this tool helpful and it saved you some time, consider buying me a c
 
 [![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/bartekszczecinski)
 
+---
+
 If you find this project useful, leave a star! ⭐
 
 ---
