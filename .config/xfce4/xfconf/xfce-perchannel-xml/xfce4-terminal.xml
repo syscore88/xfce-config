@@ -1,0 +1,18 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<channel name="xfce4-terminal" version="1.0">
+  <property name="font-name" type="string" value="Monospace Italic 12"/>
+  <property name="misc-default-geometry" type="string" value="75x20"/>
+  <property name="color-foreground" type="string" value="#eded33333b3b"/>
+  <property name="tab-activity-color" type="string" value="#5757e3e38989"/>
+  <property name="color-palette" type="string" value="rgb(0,0,0);rgb(170,0,0);rgb(0,170,0);rgb(170,85,0);rgb(0,0,170);rgb(170,0,170);rgb(0,170,170);rgb(170,170,170);rgb(85,85,85);rgb(255,85,85);rgb(85,255,85);rgb(255,255,85);rgb(85,85,255);rgb(255,85,255);rgb(85,255,255);rgb(255,255,255)"/>
+  <property name="misc-menubar-default" type="bool" value="false"/>
+  <property name="misc-show-unsafe-paste-dialog" type="bool" value="false"/>
+  <property name="scrolling-on-output" type="bool" value="true"/>
+  <property name="misc-middle-click-opens-uri" type="bool" value="true"/>
+  <property name="background-mode" type="string" value="TERMINAL_BACKGROUND_TRANSPARENT"/>
+  <property name="background-darkness" type="double" value="0.80000000000000004"/>
+  <property name="font-use-system" type="bool" value="false"/>
+  <property name="misc-cursor-shape" type="string" value="TERMINAL_CURSOR_SHAPE_IBEAM"/>
+  <property name="misc-cursor-blinks" type="bool" value="true"/>
+</channel>
