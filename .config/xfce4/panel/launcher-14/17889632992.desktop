@@ -13,6 +13,6 @@ X-XFCE-MimeType=inode/directory;x-scheme-handler/trash;
 X-AppStream-Ignore=True
 Name[pl]=Menedżer plików
 Name=File Manager
-Comment[pl]=Przegląda system plików i zarządza jego zawartością
+Comment[pl]=Przegląda system plików i zarządza jego zawartością
 Comment=Browse the file system
 X-XFCE-Source=file:///usr/share/applications/xfce4-file-manager.desktop

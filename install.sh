@@ -1,7 +1,7 @@
 #!/bin/bash
-# ==========================================================
+# ==========================================
 # SKRYPT KONFIGURACJI WIZUALNEJ XFCE
-# ==========================================================
+# ==========================================
 
 set -Eeuo pipefail
 export PATH="/usr/sbin:/sbin:$PATH"
@@ -191,14 +191,13 @@ XFCE_COMPONENTS=(xfce4-panel xfdesktop xfsettingsd xfconfd)
 
 stop_xfce_components() {
     for proc in "${XFCE_COMPONENTS[@]}"; do
-        pkill -STOP -u "$CURRENT_USER" -x "$proc" 2>/dev/null || true
+        pkill -TERM -u "$CURRENT_USER" -x "$proc" 2>/dev/null || true
     done
+    sleep 0.5
 }
 
 start_xfce_components() {
-    for proc in "${XFCE_COMPONENTS[@]}"; do
-        pkill -CONT -u "$CURRENT_USER" -x "$proc" 2>/dev/null || true
-    done
+    :
 }
 
 stop_xfce_components
@@ -210,14 +209,13 @@ safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
 
 show_progress 1 $TOTAL_STEPS "$MSG_PHASE_1"
 
-if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]] && [[ "$(realpath "$SCRIPT_DIR/wallpaper.jpg")" != "$(realpath "$wallpaper_PATH" 2>/dev/null)" ]]; then
-    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null \
-        && cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
+if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
+    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null
+    cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
 fi
 
 if [[ "$OLD_USER_PLACEHOLDER" != "$CURRENT_USER" ]]; then
-    grep -rlZ --include="*.conf" --include="*.json" --include="*.ini" \
-        "/home/$OLD_USER_PLACEHOLDER" ~/.config 2>/dev/null \
+    grep -rlZ "/home/$OLD_USER_PLACEHOLDER" ~/.config ~/.local 2>/dev/null \
         | xargs -0 -r sed -i "s|/home/$OLD_USER_PLACEHOLDER|/home/$CURRENT_USER|g" || true
 fi
 
@@ -231,61 +229,101 @@ show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
 # ==========================================
 chmod 644 "$wallpaper_PATH" 2>/dev/null || true
 
-SESSION_PID=$(pgrep -u "$CURRENT_USER" xfce4-session | head -n 1 || true)
-
-if [[ -n "$SESSION_PID" ]] && command -v xfconf-query >/dev/null 2>&1; then
-    if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+    SESSION_PID=$(pgrep -u "$CURRENT_USER" xfce4-session | head -n 1 || true)
+    if [[ -n "$SESSION_PID" ]]; then
         export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)
     fi
-    if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
-        RUNTIME_DIR="/run/user/$(id -u "$CURRENT_USER" 2>/dev/null)"
-        if [[ -S "$RUNTIME_DIR/bus" ]]; then
-            export DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME_DIR/bus"
-        fi
+fi
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+    RUNTIME_DIR="/run/user/$(id -u "$CURRENT_USER" 2>/dev/null || id -u)"
+    if [[ -S "$RUNTIME_DIR/bus" ]]; then
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME_DIR/bus"
     fi
+fi
 
-    mapfile -t DESKTOP_PROPS < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image$|image-path$" || true)
-
-    if [[ ${#DESKTOP_PROPS[@]} -eq 0 ]]; then
-        DESKTOP_PROPS=("/backdrop/screen0/monitor0/workspace0/last-image")
+USE_XFCONF=0
+if command -v xfconf-query >/dev/null 2>&1; then
+    if xfconf-query -c xfce4-desktop -l &>/dev/null; then
+        USE_XFCONF=1
     fi
+fi
+
+if [[ "$USE_XFCONF" -eq 1 ]]; then
+    mapfile -t EXISTING_PROPS < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image$|image-path$|last-single-image$" || true)
+
+    ALL_PROPS=("${EXISTING_PROPS[@]}")
+
+    for mon in monitordefault monitor0 monitor1 monitor2 monitor3 monitor4 monitorHDMI-1 monitorHDMI-2 monitorHDMI-A-1 monitorHDMI-A-2 monitoreDP-1 monitoreDP-2 monitorDP-1 monitorDP-2 monitorDP-3 monitorVGA-1 monitorVirtual-1 monitorXWAYLAND0; do
+        for ws in workspace0 workspace1 workspace2 workspace3; do
+            ALL_PROPS+=("/backdrop/screen0/$mon/$ws/last-image")
+            ALL_PROPS+=("/backdrop/screen0/$mon/$ws/image-path")
+            ALL_PROPS+=("/backdrop/screen0/$mon/$ws/last-single-image")
+        done
+        ALL_PROPS+=("/backdrop/screen0/$mon/last-image")
+        ALL_PROPS+=("/backdrop/screen0/$mon/image-path")
+        ALL_PROPS+=("/backdrop/screen0/$mon/last-single-image")
+    done
 
     if command -v xrandr >/dev/null 2>&1; then
         while IFS= read -r out; do
-            [[ -n "$out" ]] && DESKTOP_PROPS+=("/backdrop/screen0/monitor$out/workspace0/last-image")
+            if [[ -n "$out" ]]; then
+                for ws in workspace0 workspace1 workspace2 workspace3; do
+                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/last-image")
+                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/image-path")
+                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/last-single-image")
+                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/last-image")
+                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/image-path")
+                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/last-single-image")
+                done
+                ALL_PROPS+=("/backdrop/screen0/monitor$out/last-image")
+                ALL_PROPS+=("/backdrop/screen0/monitor$out/image-path")
+                ALL_PROPS+=("/backdrop/screen0/monitor$out/last-single-image")
+                ALL_PROPS+=("/backdrop/screen0/$out/last-image")
+                ALL_PROPS+=("/backdrop/screen0/$out/image-path")
+                ALL_PROPS+=("/backdrop/screen0/$out/last-single-image")
+            fi
         done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}')
-        mapfile -t DESKTOP_PROPS < <(printf '%s\n' "${DESKTOP_PROPS[@]}" | sort -u)
     fi
 
-    if [[ -d ~/.cache/xfce4/desktop ]]; then
-        find ~/.cache/xfce4/desktop -type f -iname "*$(basename "$wallpaper_PATH")*" -delete 2>/dev/null || true
-    fi
+    mapfile -t ALL_PROPS < <(printf '%s\n' "${ALL_PROPS[@]}" | sort -u)
 
-    for prop in "${DESKTOP_PROPS[@]}"; do
-        style_prop="${prop%last-image}image-style"
-        [[ "$prop" == *image-path ]] && style_prop="${prop%image-path}image-style"
+    rm -rf ~/.cache/xfce4/desktop 2>/dev/null || true
 
-        xfconf-query -c xfce4-desktop -p "$prop" -n -t string -s "/dev/null" 2>/dev/null \
-            || xfconf-query -c xfce4-desktop -p "$prop" -t string -s "/dev/null" 2>/dev/null || true
-        sleep 0.2
-        xfconf-query -c xfce4-desktop -p "$prop" -n -t string -s "$wallpaper_PATH" 2>/dev/null \
-            || xfconf-query -c xfce4-desktop -p "$prop" -t string -s "$wallpaper_PATH" 2>/dev/null || true
+    for prop in "${ALL_PROPS[@]}"; do
+        [[ -z "$prop" ]] && continue
+        style_prop=""
+        if [[ "$prop" == *last-image ]]; then
+            style_prop="${prop%last-image}image-style"
+        elif [[ "$prop" == *image-path ]]; then
+            style_prop="${prop%image-path}image-style"
+        elif [[ "$prop" == *last-single-image ]]; then
+            style_prop="${prop%last-single-image}image-style"
+        fi
 
-        xfconf-query -c xfce4-desktop -p "$style_prop" -n -t int -s 5 2>/dev/null \
-            || xfconf-query -c xfce4-desktop -p "$style_prop" -t int -s 5 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p "$prop" --create -t string -s "$wallpaper_PATH" 2>/dev/null \
+            || xfconf-query -c xfce4-desktop -p "$prop" -s "$wallpaper_PATH" 2>/dev/null || true
+
+        if [[ -n "$style_prop" ]]; then
+            xfconf-query -c xfce4-desktop -p "$style_prop" --create -t int -s 5 2>/dev/null \
+                || xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
+        fi
     done
 
-    if command -v xfdesktop >/dev/null 2>&1 && [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
-        pkill -u "$CURRENT_USER" -x xfdesktop 2>/dev/null || true
-        sleep 0.5
-        nohup xfdesktop >/dev/null 2>&1 &
-        disown
+    if command -v xfdesktop >/dev/null 2>&1; then
+        xfdesktop --reload 2>/dev/null || {
+            pkill -u "$CURRENT_USER" -x xfdesktop 2>/dev/null || true
+            sleep 0.5
+            nohup xfdesktop >/dev/null 2>&1 &
+            disown
+        }
     fi
-else
-    XFCE_DESKTOP_XML="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
-    mkdir -p "$(dirname "$XFCE_DESKTOP_XML")"
-    if [[ ! -f "$XFCE_DESKTOP_XML" ]]; then
-        cat > "$XFCE_DESKTOP_XML" <<EOF
+fi
+
+XFCE_DESKTOP_XML="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
+mkdir -p "$(dirname "$XFCE_DESKTOP_XML")"
+if [[ ! -f "$XFCE_DESKTOP_XML" ]] || ! grep -q "last-image" "$XFCE_DESKTOP_XML" 2>/dev/null; then
+    cat > "$XFCE_DESKTOP_XML" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
   <property name="backdrop" type="empty">
@@ -295,16 +333,27 @@ else
           <property name="color-style" type="int" value="0"/>
           <property name="image-style" type="int" value="5"/>
           <property name="last-image" type="string" value="$wallpaper_PATH"/>
+          <property name="image-path" type="string" value="$wallpaper_PATH"/>
+          <property name="last-single-image" type="string" value="$wallpaper_PATH"/>
+        </property>
+      </property>
+      <property name="monitordefault" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$wallpaper_PATH"/>
+          <property name="image-path" type="string" value="$wallpaper_PATH"/>
+          <property name="last-single-image" type="string" value="$wallpaper_PATH"/>
         </property>
       </property>
     </property>
   </property>
 </channel>
 EOF
-    else
-        sed -i -E 's|name="last-image" type="string" value="[^"]+"|name="last-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
-        sed -i -E 's|name="image-path" type="string" value="[^"]+"|name="image-path" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
-    fi
+else
+    sed -i -E 's|name="last-image" type="string" value="[^"]+"|name="last-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
+    sed -i -E 's|name="image-path" type="string" value="[^"]+"|name="image-path" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
+    sed -i -E 's|name="last-single-image" type="string" value="[^"]+"|name="last-single-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
 fi
 
 show_progress 4 $TOTAL_STEPS "$MSG_PHASE_2"
@@ -473,6 +522,7 @@ else
 fi
 
 clear_xfce_cache() {
+    pkill -TERM -u "$CURRENT_USER" -x xfconfd 2>/dev/null || true
     rm -rf "$HOME/.cache/xfce4/desktop" 2>/dev/null || true
     rm -rf "$HOME/.cache/xfce4/xfce4-panel" 2>/dev/null || true
     rm -rf "$HOME/.cache/sessions" 2>/dev/null || true
