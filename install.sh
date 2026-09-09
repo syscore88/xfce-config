@@ -243,8 +243,8 @@ if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
 fi
 
 USE_XFCONF=0
-if command -v xfconf-query >/dev/null 2>&1; then
-    if xfconf-query -c xfce4-desktop -l &>/dev/null; then
+if [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && command -v xfconf-query >/dev/null 2>&1; then
+    if timeout 3 xfconf-query -c xfce4-desktop -l &>/dev/null; then
         USE_XFCONF=1
     fi
 fi
@@ -301,17 +301,17 @@ if [[ "$USE_XFCONF" -eq 1 ]]; then
             style_prop="${prop%last-single-image}image-style"
         fi
 
-        xfconf-query -c xfce4-desktop -p "$prop" --create -t string -s "$wallpaper_PATH" 2>/dev/null \
-            || xfconf-query -c xfce4-desktop -p "$prop" -s "$wallpaper_PATH" 2>/dev/null || true
+        timeout 3 xfconf-query -c xfce4-desktop -p "$prop" --create -t string -s "$wallpaper_PATH" 2>/dev/null \
+            || timeout 3 xfconf-query -c xfce4-desktop -p "$prop" -s "$wallpaper_PATH" 2>/dev/null || true
 
         if [[ -n "$style_prop" ]]; then
-            xfconf-query -c xfce4-desktop -p "$style_prop" --create -t int -s 5 2>/dev/null \
-                || xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
+            timeout 3 xfconf-query -c xfce4-desktop -p "$style_prop" --create -t int -s 5 2>/dev/null \
+                || timeout 3 xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
         fi
     done
 
     if command -v xfdesktop >/dev/null 2>&1; then
-        xfdesktop --reload 2>/dev/null || {
+        timeout 3 xfdesktop --reload 2>/dev/null || {
             pkill -u "$CURRENT_USER" -x xfdesktop 2>/dev/null || true
             sleep 0.5
             nohup xfdesktop >/dev/null 2>&1 &
