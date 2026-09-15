@@ -83,8 +83,8 @@ chmod +x install.sh
 ./install.sh
 ```
 ---
+<img width="1280" height="800" alt="Screenshot_archlinux_2026-09-16_00:15:34" src="https://github.com/user-attachments/assets/2c33517a-7b7b-44da-984c-aa78cd178d84" />
 
-<img width="1280" height="800" alt="Screenshot_debian13_2026-09-03_14:04:57" src="https://github.com/user-attachments/assets/124b42f0-d6c2-4dfd-823f-cbedcc28e82d" />
 
 ### ☕ Support the Project
 
