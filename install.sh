@@ -20,11 +20,41 @@ detect_system_lang() {
 }
 SCRIPT_LANG="$(detect_system_lang)"
 
+INFO='\033[0;34m'
 SUCCESS='\033[0;32m'
+WARN='\033[0;33m'
 ERR='\033[0;31m'
 NC='\033[0m'
 
-printf '\033[?7l'
+TMP_LOG="$(mktemp /tmp/install-log.XXXXXX)"
+LOG_FILE="$HOME/install_error_$(date +%Y%m%d_%H%M%S).log"
+
+exec 3>&1
+exec >>"$TMP_LOG" 2>&1
+
+cleanup_on_exit() {
+    local exit_code=$?
+    printf '\033[?7h' >&3
+    if [ "$exit_code" -ne 0 ]; then
+        echo -e "\n" >&3
+        cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
+        if [[ "$SCRIPT_LANG" == "pl" ]]; then
+            echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
+        else
+            echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
+        fi
+    fi
+    rm -f "$TMP_LOG"
+}
+trap cleanup_on_exit EXIT
+
+_pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
+log_info()  { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${INFO}==> $m${NC}"; }
+log_ok()    { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${SUCCESS}✔ $m${NC}"; }
+log_err()   { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${ERR}✘ ERROR: $m${NC}"; }
+log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${WARN}⚠ WARN: $m${NC}"; }
+
+trap 'log_err "Błąd w linii $LINENO. Polecenie: $BASH_COMMAND" "Error at line $LINENO. Command: $BASH_COMMAND"' ERR
 
 show_progress() {
     local step=$1
@@ -58,7 +88,7 @@ show_progress() {
     if [ $filled -gt 0 ]; then printf -v bar_filled '%*s' "$filled" ''; bar_filled="${bar_filled// /#}"; fi
     if [ $empty -gt 0 ]; then printf -v bar_empty '%*s' "$empty" ''; bar_empty="${bar_empty// /-}"; fi
 
-    printf "\r\033[K[\033[1;32m%s\033[0;90m%s\033[0m] %3d%% | \033[1;36m%s\033[0m" "$bar_filled" "$bar_empty" "$percent" "$msg"
+    printf "\r\033[K[\033[1;32m%s\033[0;90m%s\033[0m] %3d%% | \033[1;36m%s\033[0m" "$bar_filled" "$bar_empty" "$percent" "$msg" >&3
 }
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
@@ -83,9 +113,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # WALIDACJA UŻYTKOWNIKA
 if [[ "$EUID" -eq 0 ]]; then
     if [[ "$SCRIPT_LANG" == "pl" ]]; then
-        echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}"
+        echo -e "${ERR}✘ Nie uruchamiaj skryptu jako root. Uruchom jako zwykły użytkownik z sudo.${NC}" >&3
     else
-        echo -e "${ERR}✘ Do not run this script as root. Run as a normal user with sudo.${NC}"
+        echo -e "${ERR}✘ Do not run this script as root. Run as a normal user with sudo.${NC}" >&3
     fi
     exit 1
 fi
@@ -111,17 +141,17 @@ else
         sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
     else
         rm -f "$SUDOERS_TMP"
-        if [[ "$SCRIPT_LANG" == "pl" ]]; then
-            echo -e "${ERR}✘ Nieprawidłowa składnia reguły sudoers - przerywam.${NC}"
-        else
-            echo -e "${ERR}✘ Invalid sudoers rule syntax - aborting.${NC}"
-        fi
+        log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
         exit 1
     fi
     rm -f "$SUDOERS_TMP"
 fi
 
 show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
+
+printf '\033[?7h' >&3
+
+printf '\033[?7l' >&3
 
 # ==========================================
 # 3. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
@@ -196,10 +226,6 @@ stop_xfce_components() {
     sleep 0.5
 }
 
-start_xfce_components() {
-    :
-}
-
 stop_xfce_components
 
 safe_copy_dir "$SCRIPT_DIR/.config" ~/.config
@@ -218,8 +244,6 @@ if [[ "$OLD_USER_PLACEHOLDER" != "$CURRENT_USER" ]]; then
     grep -rlZ "/home/$OLD_USER_PLACEHOLDER" ~/.config ~/.local 2>/dev/null \
         | xargs -0 -r sed -i "s|/home/$OLD_USER_PLACEHOLDER|/home/$CURRENT_USER|g" || true
 fi
-
-start_xfce_components
 
 show_progress 2 $TOTAL_STEPS "$MSG_PHASE_1"
 show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
@@ -537,14 +561,12 @@ clear_xfce_cache() {
 clear_xfce_cache
 
 show_progress 6 $TOTAL_STEPS "$MSG_PHASE_3"
-echo -e "\n"
-
-printf '\033[?7h'
+echo -e "\n" >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    echo -e "${SUCCESS}✔ KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}"
+    echo -e "${SUCCESS}✔ KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}" >&3
 else
-    echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}"
+    echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}" >&3
 fi
 
 systemctl reboot
