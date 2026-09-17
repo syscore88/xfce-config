@@ -268,11 +268,6 @@ if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
     cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
 fi
 
-if [[ "$OLD_USER_PLACEHOLDER" != "$CURRENT_USER" ]]; then
-    grep -rlZ "/home/$OLD_USER_PLACEHOLDER" ~/.config ~/.local 2>/dev/null \
-        | xargs -0 -r sed -i "s|/home/$OLD_USER_PLACEHOLDER|/home/$CURRENT_USER|g" || true
-fi
-
 show_progress 2 $TOTAL_STEPS "$MSG_PHASE_1"
 show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
 
