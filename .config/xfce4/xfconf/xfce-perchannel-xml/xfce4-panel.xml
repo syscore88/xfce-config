@@ -53,11 +53,15 @@
       <property name="middle-click" type="empty"/>
       <property name="square-icons" type="bool" value="true"/>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="seapplet"/>
         <value type="string" value="aplet networkmanager"/>
       </property>
       <property name="single-row" type="bool" value="true"/>
       <property name="menu-is-primary" type="bool" value="true"/>
       <property name="symbolic-icons" type="bool" value="true"/>
+      <property name="known-items" type="array">
+        <value type="string" value="dnfdragora-updater"/>
+      </property>
     </property>
     <property name="plugin-8" type="string" value="clock">
       <property name="icon-size" type="empty"/>
@@ -65,7 +69,7 @@
       <property name="show-frame" type="empty"/>
       <property name="digital-time-format" type="string" value="%T"/>
       <property name="digital-layout" type="uint" value="1"/>
-      <property name="digital-date-format" type="string" value="%Y %B %d"/>
+      <property name="digital-date-format" type="string" value="%d %B %Y"/>
     </property>
     <property name="plugin-9" type="string" value="separator">
       <property name="style" type="uint" value="0"/>
@@ -136,6 +140,10 @@
       <property name="show-command-shutdown" type="bool" value="true"/>
       <property name="show-command-restart" type="bool" value="true"/>
       <property name="show-command-logoutuser" type="bool" value="true"/>
+      <property name="recent" type="array">
+        <value type="string" value="org.mozilla.firefox.desktop"/>
+        <value type="string" value="xfce4-terminal.desktop"/>
+      </property>
     </property>
     <property name="plugin-12" type="string" value="weather">
       <property name="location" type="empty">
@@ -180,7 +188,7 @@
     <property name="plugin-16" type="string" value="xfce4-notes-plugin"/>
     <property name="notes" type="empty">
       <property name="global" type="empty">
-        <property name="version" type="string" value="1.12.0"/>
+        <property name="version" type="string" value="1.11.2"/>
         <property name="background-color" type="string" value="#DAF188"/>
       </property>
     </property>
