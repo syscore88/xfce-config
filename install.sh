@@ -145,11 +145,6 @@ elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "r
     USE_RUN0=1
 fi
 
-if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    echo -e "${INFO}==> Może zostać wyświetlona prośba o podanie hasła sudo.${NC}" >&3
-else
-    echo -e "${INFO}==> You may be asked for your sudo password below.${NC}" >&3
-fi
 sudo -v
 
 if [[ "$USE_RUN0" -eq 1 ]]; then
