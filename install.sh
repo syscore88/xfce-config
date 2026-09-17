@@ -106,13 +106,15 @@ show_progress() {
 }
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    MSG_PHASE_1="[1/3] Kopiowanie plików konfiguracyjnych i motywów..."
-    MSG_PHASE_2="[2/3] Konfiguracja środowiska XFCE i avatara..."
-    MSG_PHASE_3="[3/3] Konfiguracja ekranu logowania i uprawnień roota..."
+    MSG_PREP="Przygotowywanie..."
+    MSG_INSTALL="Instalacja..."
+    MSG_OPTIMIZE="Optymalizacja..."
+    MSG_FINALIZE="Finalizowanie..."
 else
-    MSG_PHASE_1="[1/3] Copying configuration files and themes..."
-    MSG_PHASE_2="[2/3] Configuring XFCE environment and avatar..."
-    MSG_PHASE_3="[3/3] Configuring login screen and root permissions..."
+    MSG_PREP="Preparing..."
+    MSG_INSTALL="Installation..."
+    MSG_OPTIMIZE="Optimization..."
+    MSG_FINALIZE="Finalizing..."
 fi
 
 TOTAL_STEPS=6
@@ -169,7 +171,7 @@ else
     rm -f "$SUDOERS_TMP"
 fi
 
-show_progress 0 $TOTAL_STEPS "$MSG_PHASE_1"
+show_progress 0 $TOTAL_STEPS "$MSG_PREP"
 
 printf '\033[?7h' >&3
 
@@ -261,15 +263,15 @@ safe_copy_dir "$SCRIPT_DIR/.local" ~/.local
 safe_copy_dir "$SCRIPT_DIR/.icons" ~/.icons
 safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
 
-show_progress 1 $TOTAL_STEPS "$MSG_PHASE_1"
+show_progress 1 $TOTAL_STEPS "$MSG_INSTALL"
 
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
     mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null
     cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
 fi
 
-show_progress 2 $TOTAL_STEPS "$MSG_PHASE_1"
-show_progress 3 $TOTAL_STEPS "$MSG_PHASE_2"
+show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
+show_progress 3 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================
 # 5. USTAWIENIE TAPETY PULPITOWEJ
@@ -404,7 +406,7 @@ else
     sed -i -E 's|name="last-single-image" type="string" value="[^"]+"|name="last-single-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
 fi
 
-show_progress 4 $TOTAL_STEPS "$MSG_PHASE_2"
+show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================
 # 6. USTAWIENIE AWATARA UŻYTKOWNIKA
@@ -444,7 +446,7 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     fi
 fi
 
-show_progress 5 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 5 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================
 # 7. KONFIGURACJA EKRANU LOGOWANIA (LIGHTDM)
@@ -584,7 +586,7 @@ clear_xfce_cache() {
 }
 clear_xfce_cache
 
-show_progress 6 $TOTAL_STEPS "$MSG_PHASE_3"
+show_progress 6 $TOTAL_STEPS "$MSG_FINALIZE"
 echo -e "\n" >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
