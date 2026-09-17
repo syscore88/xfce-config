@@ -4,6 +4,8 @@
 # ==========================================
 
 set -Eeuo pipefail
+
+FAILED_PACKAGES=()
 export PATH="/usr/sbin:/sbin:$PATH"
 
 # ==========================================
@@ -35,13 +37,21 @@ exec >>"$TMP_LOG" 2>&1
 cleanup_on_exit() {
     local exit_code=$?
     printf '\033[?7h' >&3
-    if [ "$exit_code" -ne 0 ]; then
+    if [ "$exit_code" -ne 0 ] || [ "${#FAILED_PACKAGES[@]}" -gt 0 ]; then
         echo -e "\n" >&3
         cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
-        if [[ "$SCRIPT_LANG" == "pl" ]]; then
-            echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
+        if [ "$exit_code" -ne 0 ]; then
+            if [[ "$SCRIPT_LANG" == "pl" ]]; then
+                echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
+            else
+                echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
+            fi
         else
-            echo -e "${ERR}✘ An error occurred (code: $exit_code). Detailed log saved to: $LOG_FILE${NC}" >&3
+            if [[ "$SCRIPT_LANG" == "pl" ]]; then
+                echo -e "${WARN}⚠ Niektóre pakiety nie zostały zainstalowane. Log zapisano w: $LOG_FILE${NC}" >&3
+            else
+                echo -e "${WARN}⚠ Some packages failed to install. Log saved to: $LOG_FILE${NC}" >&3
+            fi
         fi
     fi
     rm -f "$TMP_LOG"
@@ -49,10 +59,14 @@ cleanup_on_exit() {
 trap cleanup_on_exit EXIT
 
 _pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
-log_info()  { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${INFO}==> $m${NC}"; }
-log_ok()    { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${SUCCESS}✔ $m${NC}"; }
-log_err()   { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${ERR}✘ ERROR: $m${NC}"; }
-log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; echo -e "${WARN}⚠ WARN: $m${NC}"; }
+_log_write() {
+    echo -e "$1"
+    echo -e "$1" >&3
+}
+log_info()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${INFO}==> $m${NC}"; }
+log_ok()    { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${SUCCESS}✔ $m${NC}"; }
+log_err()   { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${ERR}✘ ERROR: $m${NC}"; }
+log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${WARN}⚠ WARN: $m${NC}"; }
 
 trap 'log_err "Błąd w linii $LINENO. Polecenie: $BASH_COMMAND" "Error at line $LINENO. Command: $BASH_COMMAND"' ERR
 
@@ -125,14 +139,28 @@ fi
 # ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
-if ! command -v visudo >/dev/null 2>&1 || sudo --version 2>/dev/null | grep -qi "run0"; then
+if ! command -v visudo >/dev/null 2>&1; then
+    USE_RUN0=1
+elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "run0"; then
     USE_RUN0=1
 fi
 
+if [[ "$SCRIPT_LANG" == "pl" ]]; then
+    echo -e "${INFO}==> Może zostać wyświetlona prośba o podanie hasła sudo.${NC}" >&3
+else
+    echo -e "${INFO}==> You may be asked for your sudo password below.${NC}" >&3
+fi
 sudo -v
 
 if [[ "$USE_RUN0" -eq 1 ]]; then
-    printf 'polkit._run0_nopasswd.push("%s");\n' "$CURRENT_USER" | sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null
+    sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null <<POLKIT_RULE_EOF
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        subject.user == "$CURRENT_USER") {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_RULE_EOF
     sudo systemctl try-restart polkit 2>/dev/null || true
 else
     SUDOERS_TMP="$(mktemp)"
@@ -196,13 +224,19 @@ case "$DISTRO_ID" in
     *)
         PKG_INSTALL_CMD=()
         XFCE_PKGS=()
+        log_warn "Nierozpoznana dystrybucja ($DISTRO_ID) - pomijam instalację dodatkowych pakietów XFCE." \
+                 "Unrecognized distribution ($DISTRO_ID) - skipping additional XFCE package installation."
         ;;
 esac
 
 if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
     for pkg in "${XFCE_PKGS[@]}"; do
-        "${PKG_INSTALL_CMD[@]}" "$pkg" >/dev/null 2>&1 || true
+        "${PKG_INSTALL_CMD[@]}" "$pkg" || FAILED_PACKAGES+=("$pkg")
     done
+    if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
+        log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
+                 "Failed to install: ${FAILED_PACKAGES[*]}. Check the log: $LOG_FILE"
+    fi
 fi
 
 # ==========================================
@@ -256,7 +290,8 @@ chmod 644 "$wallpaper_PATH" 2>/dev/null || true
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
     SESSION_PID=$(pgrep -u "$CURRENT_USER" xfce4-session | head -n 1 || true)
     if [[ -n "$SESSION_PID" ]]; then
-        export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)
+        DBUS_ADDR_FROM_ENVIRON="$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)"
+        export DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR_FROM_ENVIRON"
     fi
 fi
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
