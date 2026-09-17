@@ -36,6 +36,7 @@ exec >>"$TMP_LOG" 2>&1
 
 cleanup_on_exit() {
     local exit_code=$?
+    declare -F restore_packagekit >/dev/null && restore_packagekit || true
     printf '\033[?7h' >&3
     if [ "$exit_code" -ne 0 ] || [ "${#FAILED_PACKAGES[@]}" -gt 0 ]; then
         echo -e "\n" >&3
@@ -69,6 +70,59 @@ log_err()   { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${ERR}✘ ERROR: 
 log_warn()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${WARN}⚠ WARN: $m${NC}"; }
 
 trap 'log_err "Błąd w linii $LINENO. Polecenie: $BASH_COMMAND" "Error at line $LINENO. Command: $BASH_COMMAND"' ERR
+
+# ==========================================================
+# PACKAGEKIT + BLOKADA MENEDŻERA PAKIETÓW
+# ==========================================================
+PACKAGEKIT_MASKED=0
+PACKAGEKIT_UNITS=(packagekit.service packagekit-offline-update.service)
+
+disable_packagekit() {
+    [[ "${PACKAGEKIT_MASKED:-0}" -eq 1 ]] && return 0
+    sudo systemctl stop "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
+    if command -v killall >/dev/null 2>&1; then
+        sudo killall -q packagekitd 2>/dev/null || true
+    else
+        sudo pkill -x packagekitd 2>/dev/null || true
+    fi
+    sudo systemctl mask "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
+    PACKAGEKIT_MASKED=1
+    log_info "PackageKit zatrzymany i zamaskowany na czas instalacji." \
+             "PackageKit stopped and masked for the duration of the installation."
+}
+
+restore_packagekit() {
+    [[ "${PACKAGEKIT_MASKED:-0}" -eq 1 ]] || return 0
+    sudo systemctl unmask "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
+    PACKAGEKIT_MASKED=0
+    log_info "PackageKit odmaskowany." "PackageKit unmasked."
+}
+
+_pkg_lock_busy() {
+    local f
+    for f in /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock \
+             /run/zypp.pid /var/run/zypp.pid /var/lib/pacman/db.lck \
+             /var/cache/dnf/metadata_lock.pid /var/lib/rpm/.rpm.lock; do
+        [[ -e "$f" ]] || continue
+        sudo fuser "$f" >/dev/null 2>&1 && return 0
+    done
+    pgrep -x 'apt|apt-get|dpkg|zypper|pacman|dnf|dnf5|packagekitd' >/dev/null 2>&1 && return 0
+    return 1
+}
+
+wait_for_pkg_lock() {
+    local timeout="${1:-300}" waited=0
+    disable_packagekit
+    while _pkg_lock_busy; do
+        if (( waited >= timeout )); then
+            log_warn "Blokada menedżera pakietów trwa ponad ${timeout}s - kontynuuję mimo to." \
+                     "Package manager lock held for over ${timeout}s - continuing anyway."
+            break
+        fi
+        sleep 3
+        waited=$(( waited + 3 ))
+    done
+}
 
 show_progress() {
     local step=$1
@@ -180,6 +234,8 @@ printf '\033[?7l' >&3
 # ==========================================
 # 3. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
 # ==========================================
+disable_packagekit
+
 XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
 
 detect_distro() {
@@ -205,6 +261,7 @@ case "$DISTRO_ID" in
         XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
         ;;
     debian)
+        wait_for_pkg_lock
         sudo apt-get update -y >/dev/null 2>&1 || true
         PKG_INSTALL_CMD=(sudo apt-get install -y)
         XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
@@ -226,6 +283,7 @@ case "$DISTRO_ID" in
 esac
 
 if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
+    wait_for_pkg_lock
     for pkg in "${XFCE_PKGS[@]}"; do
         "${PKG_INSTALL_CMD[@]}" "$pkg" || FAILED_PACKAGES+=("$pkg")
     done
@@ -272,6 +330,8 @@ fi
 
 show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
 show_progress 3 $TOTAL_STEPS "$MSG_OPTIMIZE"
+
+restore_packagekit
 
 # ==========================================
 # 5. USTAWIENIE TAPETY PULPITOWEJ
