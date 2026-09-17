@@ -118,7 +118,6 @@ fi
 TOTAL_STEPS=6
 
 CURRENT_USER=$(whoami)
-OLD_USER_PLACEHOLDER="bartek"
 USER_PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
 wallpaper_PATH="$USER_PICTURES_DIR/wallpaper.jpg"
 LOGIN_WALLPAPER_PATH="/usr/share/backgrounds/login-wallpaper.png"
