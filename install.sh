@@ -82,13 +82,9 @@ PACKAGEKIT_UNITS=(packagekit.service packagekit-offline-update.service)
 
 disable_packagekit() {
     [[ "${PACKAGEKIT_MASKED:-0}" -eq 1 ]] && return 0
-    sudo systemctl stop "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
-    if command -v killall >/dev/null 2>&1; then
-        sudo killall -q packagekitd 2>/dev/null || true
-    else
-        sudo pkill -x packagekitd 2>/dev/null || true
-    fi
-    sudo systemctl mask "${PACKAGEKIT_UNITS[@]}" 2>/dev/null || true
+    local kill_cmd="pkill -x packagekitd"
+    command -v killall >/dev/null 2>&1 && kill_cmd="killall -q packagekitd"
+    sudo bash -c "systemctl stop ${PACKAGEKIT_UNITS[*]} 2>/dev/null; $kill_cmd 2>/dev/null; systemctl mask ${PACKAGEKIT_UNITS[*]} 2>/dev/null; true"
     PACKAGEKIT_MASKED=1
     log_info "PackageKit zatrzymany i zamaskowany na czas instalacji." \
              "PackageKit stopped and masked for the duration of the installation."
@@ -216,7 +212,8 @@ sudo -v
 SUDO_KEEPALIVE_PID=$!
 
 if [[ "$USE_RUN0" -eq 1 ]]; then
-    sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null <<POLKIT_RULE_EOF
+    RUN0_RULE_TMP="$(mktemp)"
+    cat > "$RUN0_RULE_TMP" <<POLKIT_RULE_EOF
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
         subject.user == "$CURRENT_USER") {
@@ -224,12 +221,13 @@ polkit.addRule(function(action, subject) {
     }
 });
 POLKIT_RULE_EOF
-    sudo systemctl try-restart polkit 2>/dev/null || true
+    sudo bash -c "install -m 0644 '$RUN0_RULE_TMP' '$RUN0_NOPASSWD_FILE' && { systemctl try-restart polkit 2>/dev/null || true; }"
+    rm -f "$RUN0_RULE_TMP"
 else
     SUDOERS_TMP="$(mktemp)"
     echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
-    if sudo visudo -cf "$SUDOERS_TMP" &>/dev/null; then
-        sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
+    if sudo bash -c "visudo -cf '$SUDOERS_TMP' >/dev/null 2>&1 && install -m 0440 -o root -g root '$SUDOERS_TMP' /etc/sudoers.d/99-temp-installer"; then
+        :
     else
         rm -f "$SUDOERS_TMP"
         log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
