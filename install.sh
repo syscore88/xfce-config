@@ -204,7 +204,15 @@ elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "r
 fi
 
 sudo -v
-( while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) &
+(
+    set +e
+    trap - ERR
+    while true; do
+        sudo -n true 2>/dev/null
+        sleep 60
+        kill -0 "$$" 2>/dev/null || exit
+    done
+) &
 SUDO_KEEPALIVE_PID=$!
 
 if [[ "$USE_RUN0" -eq 1 ]]; then
