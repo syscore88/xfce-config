@@ -496,6 +496,7 @@ if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
 
     sudo cp -af "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" 2>/dev/null \
         && sudo chmod 644 "$AVATAR_DEST" 2>/dev/null || true
+    command -v restorecon >/dev/null 2>&1 && sudo restorecon "$AVATAR_DEST" 2>/dev/null || true
 
     if sudo test -f "$AVATAR_DEST"; then
         ACCOUNTS_FILE="/var/lib/AccountsService/users/$CURRENT_USER"
@@ -540,6 +541,15 @@ detect_display_manager() {
     if [[ -z "$dm" ]] && command -v pgrep >/dev/null 2>&1; then
         pgrep -x lightdm >/dev/null 2>&1 && dm="lightdm"
     fi
+    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -e /etc/systemd/system/display-manager.service ]]; then
+        dm="$(basename "$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null)" .service)"
+    fi
+    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -r /etc/sysconfig/displaymanager ]]; then
+        dm="$(sed -nE 's/^DISPLAYMANAGER="?([^"# ]*)"?.*/\1/p' /etc/sysconfig/displaymanager 2>/dev/null | tail -n1)"
+    fi
+    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -e /etc/alternatives/default-displaymanager ]]; then
+        dm="$(basename "$(readlink -f /etc/alternatives/default-displaymanager 2>/dev/null)")"
+    fi
     echo "$dm"
 }
 ACTIVE_DM="$(detect_display_manager)"
@@ -557,6 +567,7 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
 
     if [[ "$LOGIN_WALLPAPER_OK" -eq 1 ]]; then
         sudo chmod 644 "$LOGIN_WALLPAPER_PATH" 2>/dev/null || true
+        command -v restorecon >/dev/null 2>&1 && sudo restorecon "$LOGIN_WALLPAPER_PATH" 2>/dev/null || true
     fi
 
     if [[ "$LOGIN_WALLPAPER_OK" -eq 1 ]]; then
