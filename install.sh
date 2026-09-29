@@ -272,6 +272,15 @@ detect_distro() {
 }
 DISTRO_ID="$(detect_distro)"
 
+pkg_installed() {
+    case "$DISTRO_ID" in
+        arch)            pacman -Qq "$1" &>/dev/null ;;
+        fedora|opensuse) rpm -q --quiet "$1" &>/dev/null ;;
+        debian)          [[ "$(dpkg-query -W -f='${db:Status-Abbrev}' "$1" 2>/dev/null)" == ii* ]] ;;
+        *)               return 1 ;;
+    esac
+}
+
 case "$DISTRO_ID" in
     arch)
         PKG_INSTALL_CMD=(sudo pacman -S --noconfirm --needed)
@@ -302,6 +311,7 @@ esac
 if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
     wait_for_pkg_lock
     for pkg in "${XFCE_PKGS[@]}"; do
+        pkg_installed "$pkg" && continue
         "${PKG_INSTALL_CMD[@]}" "$pkg" || FAILED_PACKAGES+=("$pkg")
     done
     if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
