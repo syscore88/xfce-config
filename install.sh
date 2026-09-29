@@ -256,14 +256,13 @@ disable_packagekit
 XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
 
 detect_distro() {
-    local id="" id_like=""
+    local id_like=""
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
-        id="${ID:-}"
-        id_like="${ID_LIKE:-}"
+        id_like="${ID_LIKE:-${ID:-}}"
     fi
-    case " $id $id_like " in
-        *arch*|*manjaro*|*endeavouros*) echo "arch" ;;
+    case " $id_like " in
+        *arch*) echo "arch" ;;
         *debian*|*ubuntu*) echo "debian" ;;
         *opensuse*|*suse*) echo "opensuse" ;;
         *fedora*|*rhel*) echo "fedora" ;;
