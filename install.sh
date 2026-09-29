@@ -541,13 +541,13 @@ detect_display_manager() {
     if [[ -z "$dm" ]] && command -v pgrep >/dev/null 2>&1; then
         pgrep -x lightdm >/dev/null 2>&1 && dm="lightdm"
     fi
-    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -e /etc/systemd/system/display-manager.service ]]; then
+    if [[ -z "$dm" || "$dm" == display-manager* ]] && [[ -e /etc/systemd/system/display-manager.service ]]; then
         dm="$(basename "$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null)" .service)"
     fi
-    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -r /etc/sysconfig/displaymanager ]]; then
+    if [[ -z "$dm" || "$dm" == display-manager* ]] && [[ -r /etc/sysconfig/displaymanager ]]; then
         dm="$(sed -nE 's/^DISPLAYMANAGER="?([^"# ]*)"?.*/\1/p' /etc/sysconfig/displaymanager 2>/dev/null | tail -n1)"
     fi
-    if [[ -z "$dm" || "$dm" == "display-manager" ]] && [[ -e /etc/alternatives/default-displaymanager ]]; then
+    if [[ -z "$dm" || "$dm" == display-manager* ]] && [[ -e /etc/alternatives/default-displaymanager ]]; then
         dm="$(basename "$(readlink -f /etc/alternatives/default-displaymanager 2>/dev/null)")"
     fi
     echo "$dm"
