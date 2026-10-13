@@ -253,7 +253,7 @@ printf '\033[?7l' >&3
 # ==========================================
 disable_packagekit
 
-XFCE_PKGS_COMMON=(xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
+XFCE_PKGS_COMMON=(xfce.xfce4-whiskermenu-plugin xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce.xfce4-weather-plugin  xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-wavelan-plugin xfce4-screensaver)
 
 detect_distro() {
     local id_like=""
