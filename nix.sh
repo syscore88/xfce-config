@@ -224,7 +224,7 @@ fi
 LOGIN_WALLPAPER_NIX="# brak"
 if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     sudo install -m 644 -o root -g root "$SCRIPT_DIR/login-wallpaper.png" "$NIXOS_DIR/login-wallpaper.png"
-    LOGIN_WALLPAPER_NIX="services.xserver.displayManager.lightdm.background = lib.mkDefault ./login-wallpaper.png;"
+    LOGIN_WALLPAPER_NIX="services.xserver.displayManager.lightdm.background = lib.mkForce ./login-wallpaper.png;"
 fi
 
 XFCE_MODULE_TMP="$(mktemp)"
@@ -233,9 +233,11 @@ cat > "$XFCE_MODULE_TMP" <<NIX_EOF
 
 let
   xfcePluginNames = [
+    "xfce4-whiskermenu-plugin"
     "xfce4-cpugraph-plugin"
     "xfce4-clipman-plugin"
     "xfce4-netload-plugin"
+    "xfce4-weather-plugin"
     "xfce4-mount-plugin"
     "xfce4-diskperf-plugin"
     "xfce4-notes-plugin"
@@ -243,10 +245,19 @@ let
     "xfce4-wavelan-plugin"
     "xfce4-screensaver"
   ];
-  lookup = n: pkgs.xfce.\${n} or pkgs.\${n} or null;
+  try = v: let r = builtins.tryEval v; in if r.success then r.value else null;
+  lookup = n:
+    let
+      top = try (pkgs.\${n} or null);
+      sub = try (pkgs.xfce.\${n} or null);
+    in
+      if lib.isDerivation top then top
+      else if lib.isDerivation sub then sub
+      else null;
+  usable = p: p != null && !(p.meta.broken or false);
 in
 {
-  environment.systemPackages = lib.filter (p: p != null) (map lookup xfcePluginNames);
+  environment.systemPackages = lib.filter usable (map lookup xfcePluginNames);
 
   $LOGIN_WALLPAPER_NIX
 }
