@@ -242,7 +242,6 @@ let
     "xfce4-diskperf-plugin"
     "xfce4-notes-plugin"
     "xfce4-genmon-plugin"
-    "xfce4-wavelan-plugin"
     "xfce4-screensaver"
   ];
   try = v: let r = builtins.tryEval v; in if r.success then r.value else null;
