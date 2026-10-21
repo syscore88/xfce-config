@@ -28,6 +28,15 @@ LOG_FILE="$HOME/install_error_$(date +%Y%m%d_%H%M%S).log"
 exec 3>&1
 exec >>"$TMP_LOG" 2>&1
 
+safe_copy_dir() {
+    local src="$1" dst="$2"
+    if [[ -d "$src" ]] && [[ "$(realpath "$src" 2>/dev/null)" != "$(realpath "$dst" 2>/dev/null)" ]]; then
+        mkdir -p "$dst" 2>/dev/null || return 0
+        cp -af "$src/." "$dst/" 2>/dev/null || true
+    fi
+    return 0
+}
+
 cleanup_on_exit() {
     local exit_code=$?
     [ -n "${SUDO_KEEPALIVE_PID:-}" ] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
@@ -238,7 +247,6 @@ let
     "xfce4-weather-plugin"
     "xfce4-mount-plugin"
     "xfce4-diskperf-plugin"
-    "xfce4-notes-plugin"
     "xfce4-genmon-plugin"
     "xfce4-screensaver"
   ];
@@ -287,15 +295,6 @@ show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
 # ==========================================
 # 3. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
 # ==========================================
-safe_copy_dir() {
-    local src="$1" dst="$2"
-    if [[ -d "$src" ]] && [[ "$(realpath "$src" 2>/dev/null)" != "$(realpath "$dst" 2>/dev/null)" ]]; then
-        mkdir -p "$dst" 2>/dev/null || return 0
-        cp -af "$src/." "$dst/" 2>/dev/null || true
-    fi
-    return 0
-}
-
 XFCE_COMPONENTS=(xfce4-panel xfdesktop xfsettingsd xfconfd)
 
 stop_xfce_components() {
