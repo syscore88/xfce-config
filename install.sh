@@ -1,16 +1,13 @@
 #!/bin/bash
-# ==========================================
+# ===================================
 # SKRYPT KONFIGURACJI WIZUALNEJ XFCE
-# ==========================================
+# ===================================
 
 set -Eeuo pipefail
 
 FAILED_PACKAGES=()
 export PATH="/usr/sbin:/sbin:$PATH"
 
-# ==========================================
-# 1. WYKRYWANIE JĘZYKA SYSTEMU I ZMIENNE
-# ==========================================
 detect_system_lang() {
     local sys_lang="${LANG:-}"
     [[ -z "$sys_lang" ]] && sys_lang="${LC_ALL:-${LC_MESSAGES:-}}"
@@ -131,9 +128,6 @@ show_progress() {
     local total=$2
     local msg=$3
     local percent=$(( step * 100 / total ))
-
-    # Szerokość terminala czytana bezpośrednio z /dev/tty
-    # (stdout/stderr skryptu są przekierowane do pliku logu, więc tput by tu zawiódł)
     local cols
     cols=$(stty size </dev/tty 2>/dev/null || true)
     cols="${cols##* }"
@@ -195,7 +189,7 @@ if [[ "$EUID" -eq 0 ]]; then
 fi
 
 # ==========================================
-# 2. UPRAWNIENIA TYMCZASOWE (SUDO / POLKIT)
+# 1. UPRAWNIENIA TYMCZASOWE (SUDO / POLKIT)
 # ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
@@ -252,7 +246,7 @@ printf '\033[?7h' >&3
 printf '\033[?7l' >&3
 
 # ==========================================
-# 3. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
+# 2. WYKRYWANIE DYSTRYBUCJI I INSTALACJA PAKIETÓW
 # ==========================================
 disable_packagekit
 
@@ -323,7 +317,7 @@ if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
 fi
 
 # ==========================================
-# 4. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
+# 3. KOPIOWANIE PLIKÓW KONFIGURACYJNYCH
 # ==========================================
 safe_copy_dir() {
     local src="$1" dst="$2"
@@ -363,7 +357,7 @@ show_progress 3 $TOTAL_STEPS "$MSG_OPTIMIZE"
 restore_packagekit
 
 # ==========================================
-# 5. USTAWIENIE TAPETY PULPITOWEJ
+# 4. USTAWIENIE TAPETY PULPITOWEJ
 # ==========================================
 chmod 644 "$wallpaper_PATH" 2>/dev/null || true
 
@@ -498,7 +492,7 @@ fi
 show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================
-# 6. USTAWIENIE AWATARA UŻYTKOWNIKA
+# 5. USTAWIENIE AWATARA UŻYTKOWNIKA
 # ==========================================
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
     cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
@@ -539,7 +533,7 @@ fi
 show_progress 5 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
 # ==========================================
-# 7. KONFIGURACJA EKRANU LOGOWANIA (LIGHTDM)
+# 6. KONFIGURACJA EKRANU LOGOWANIA (LIGHTDM)
 # ==========================================
 detect_display_manager() {
     local dm=""
@@ -662,7 +656,7 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
 fi
 
 # ==========================================
-# 8. ZAKOŃCZENIE I SPRZĄTANIE
+# 7. ZAKOŃCZENIE I SPRZĄTANIE
 # ==========================================
 
 clear_xfce_cache() {
