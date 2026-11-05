@@ -30,9 +30,11 @@ The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and sele
 | Distribution | Package Manager |
 | :--- | :--- |
 | **Arch Linux / Manjaro / EndeavourOS** | `pacman` |
-| **Debian / Ubuntu** | `apt` (`apt-get update` runs first) |
+| **Debian / Ubuntu** | `apt` |
 | **openSUSE / SUSE** | `zypper` |
 | **Fedora / RHEL** | `dnf` |
+| **Void** | `xbps` | 
+| **NixOs** | `nix` | 
 
 **Installed plugins:** `xfce4-cpugraph-plugin`, `xfce4-clipman-plugin`, `xfce4-netload-plugin`, `xfce4-mount-plugin`, `xfce4-diskperf-plugin`, `xfce4-notes-plugin`, `xfce4-genmon-plugin`, `xfce4-wavelan-plugin`, `xfce4-screensaver`.
 
