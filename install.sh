@@ -57,7 +57,7 @@ cleanup_on_exit() {
     local do_reboot=0
     [ "$exit_code" -eq 0 ] && [ "${DO_REBOOT:-0}" = "1" ] && do_reboot=1
     if [ "${SUDO_READY:-0}" = "1" ]; then
-        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && systemctl reboot' _ \
+        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && { systemctl reboot 2>/dev/null || reboot; }' _ \
             "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" \
             "/etc/sudoers.d/99-temp-installer" \
             "$do_reboot"
@@ -105,7 +105,7 @@ _pkg_lock_busy() {
         [[ -e "$f" ]] || continue
         sudo fuser "$f" >/dev/null 2>&1 && return 0
     done
-    pgrep -x 'apt|apt-get|dpkg|zypper|pacman|dnf|dnf5|packagekitd' >/dev/null 2>&1 && return 0
+    pgrep -x 'apt|apt-get|dpkg|zypper|pacman|dnf|dnf5|xbps-install|packagekitd' >/dev/null 2>&1 && return 0
     return 1
 }
 
@@ -260,6 +260,7 @@ detect_distro() {
     fi
     case " $id_like " in
         *arch*) echo "arch" ;;
+        *void*) echo "void" ;;
         *debian*|*ubuntu*) echo "debian" ;;
         *opensuse*|*suse*) echo "opensuse" ;;
         *fedora*|*rhel*) echo "fedora" ;;
@@ -271,6 +272,7 @@ DISTRO_ID="$(detect_distro)"
 pkg_installed() {
     case "$DISTRO_ID" in
         arch)            pacman -Qq "$1" &>/dev/null ;;
+        void)            xbps-query "$1" &>/dev/null ;;
         fedora|opensuse) rpm -q --quiet "$1" &>/dev/null ;;
         debian)          [[ "$(dpkg-query -W -f='${db:Status-Abbrev}' "$1" 2>/dev/null)" == ii* ]] ;;
         *)               return 1 ;;
@@ -281,6 +283,12 @@ case "$DISTRO_ID" in
     arch)
         PKG_INSTALL_CMD=(sudo pacman -S --noconfirm --needed)
         XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        ;;
+    void)
+        wait_for_pkg_lock
+        sudo xbps-install -Suy xbps || true
+        PKG_INSTALL_CMD=(sudo xbps-install -y)
+        XFCE_PKGS=(dbus elogind NetworkManager network-manager-applet xorg-minimal lightdm lightdm-gtk3-greeter xfce4 "${XFCE_PKGS_COMMON[@]}")
         ;;
     debian)
         wait_for_pkg_lock
@@ -556,6 +564,9 @@ detect_display_manager() {
     if [[ -z "$dm" || "$dm" == display-manager* ]] && [[ -e /etc/alternatives/default-displaymanager ]]; then
         dm="$(basename "$(readlink -f /etc/alternatives/default-displaymanager 2>/dev/null)")"
     fi
+    if [[ -z "$dm" && "$DISTRO_ID" == "void" ]] && command -v lightdm >/dev/null 2>&1; then
+        dm="lightdm"
+    fi
     echo "$dm"
 }
 ACTIVE_DM="$(detect_display_manager)"
@@ -681,6 +692,19 @@ if [[ "$SCRIPT_LANG" == "pl" ]]; then
     echo -e "${SUCCESS}✔ KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}" >&3
 else
     echo -e "${SUCCESS}✔ CONFIGURATION COMPLETED SUCCESSFULLY!${NC}" >&3
+fi
+
+if [[ "$DISTRO_ID" == "void" ]]; then
+    for svc in dhcpcd wpa_supplicant; do
+        if [[ -L "/var/service/$svc" ]]; then
+            sudo rm -f "/var/service/$svc" || true
+        fi
+    done
+    for svc in dbus elogind NetworkManager lightdm; do
+        if [[ -d "/etc/sv/$svc" && ! -e "/var/service/$svc" ]]; then
+            sudo ln -s "/etc/sv/$svc" "/var/service/$svc" || true
+        fi
+    done
 fi
 
 DO_REBOOT=1
