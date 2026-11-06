@@ -177,6 +177,9 @@ TOTAL_STEPS=6
 
 CURRENT_USER=$(whoami)
 USER_PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
+if [[ -z "$USER_PICTURES_DIR" || "${USER_PICTURES_DIR%/}" == "${HOME%/}" ]]; then
+    USER_PICTURES_DIR="$HOME/Pictures"
+fi
 wallpaper_PATH="$USER_PICTURES_DIR/wallpaper.jpg"
 LOGIN_WALLPAPER_PATH="/usr/share/backgrounds/login-wallpaper.png"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
