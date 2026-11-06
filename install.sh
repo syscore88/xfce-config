@@ -452,7 +452,7 @@ if [[ "$USE_XFCONF" -eq 1 ]]; then
                 ALL_PROPS+=("/backdrop/screen0/$out/image-path")
                 ALL_PROPS+=("/backdrop/screen0/$out/last-single-image")
             fi
-        done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}')
+        done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}' || true)
     fi
 
     mapfile -t ALL_PROPS < <(printf '%s\n' "${ALL_PROPS[@]}" | sort -u)
