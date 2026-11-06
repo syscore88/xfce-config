@@ -6,6 +6,7 @@
 set -Eeuo pipefail
 
 FAILED_PACKAGES=()
+PLUGIN_ISSUES=()
 export PATH="/usr/sbin:/sbin:$PATH"
 
 detect_system_lang() {
@@ -36,9 +37,11 @@ cleanup_on_exit() {
     declare -F restore_packagekit >/dev/null && restore_packagekit || true
     [ -n "${SUDO_KEEPALIVE_PID:-}" ] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
     printf '\033[?7h' >&3
+    if [ "$exit_code" -ne 0 ] || [ "${#FAILED_PACKAGES[@]}" -gt 0 ] || [ "${#PLUGIN_ISSUES[@]}" -gt 0 ]; then
+        cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
+    fi
     if [ "$exit_code" -ne 0 ] || [ "${#FAILED_PACKAGES[@]}" -gt 0 ]; then
         echo -e "\n" >&3
-        cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
         if [ "$exit_code" -ne 0 ]; then
             if [[ "$SCRIPT_LANG" == "pl" ]]; then
                 echo -e "${ERR}✘ Wystąpił błąd (kod: $exit_code). Szczegółowy log zapisano w: $LOG_FILE${NC}" >&3
@@ -288,7 +291,7 @@ case "$DISTRO_ID" in
         wait_for_pkg_lock
         sudo xbps-install -Suy xbps || true
         PKG_INSTALL_CMD=(sudo xbps-install -y)
-        XFCE_PKGS=(dbus elogind NetworkManager network-manager-applet xorg-minimal lightdm lightdm-gtk3-greeter xfce4 "${XFCE_PKGS_COMMON[@]}")
+        XFCE_PKGS=(dbus elogind polkit accountsservice NetworkManager network-manager-applet xorg-minimal xrandr xf86-input-libinput mesa-dri fontconfig dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji xdg-user-dirs adwaita-icon-theme lightdm lightdm-gtk3-greeter xfce4 "${XFCE_PKGS_COMMON[@]}")
         ;;
     debian)
         wait_for_pkg_lock
@@ -316,7 +319,15 @@ if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
     wait_for_pkg_lock
     for pkg in "${XFCE_PKGS[@]}"; do
         pkg_installed "$pkg" && continue
-        "${PKG_INSTALL_CMD[@]}" "$pkg" || FAILED_PACKAGES+=("$pkg")
+        if ! "${PKG_INSTALL_CMD[@]}" "$pkg"; then
+            if [[ "$pkg" == *-plugin ]]; then
+                PLUGIN_ISSUES+=("$pkg")
+                _pick_msg "Nie udało się zainstalować pluginu: $pkg (dystrybucja: $DISTRO_ID)" \
+                          "Failed to install plugin: $pkg (distribution: $DISTRO_ID)"
+            else
+                FAILED_PACKAGES+=("$pkg")
+            fi
+        fi
     done
     if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
         log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
@@ -352,6 +363,19 @@ safe_copy_dir "$SCRIPT_DIR/.local" ~/.local
 safe_copy_dir "$SCRIPT_DIR/.icons" ~/.icons
 safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
 
+PANEL_XML="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml"
+if [[ -f "$PANEL_XML" ]]; then
+    while IFS= read -r plugin_name; do
+        [[ "$plugin_name" =~ ^[A-Za-z0-9_-]+$ ]] || continue
+        if [[ ! -f "/usr/share/xfce4/panel/plugins/$plugin_name.desktop" && ! -f "/usr/share/xfce4/panel-plugins/$plugin_name.desktop" ]]; then
+            sed -i -E "s|(name=\"plugin-[0-9]+\" type=\"string\" value=\")$plugin_name(\")|\1separator\2|" "$PANEL_XML" || true
+            PLUGIN_ISSUES+=("$plugin_name")
+            _pick_msg "Brak pluginu panelu: $plugin_name (dystrybucja: $DISTRO_ID)" \
+                      "Missing panel plugin: $plugin_name (distribution: $DISTRO_ID)"
+        fi
+    done < <(sed -nE 's|.*name="plugin-[0-9]+" type="string" value="([^"]+)".*|\1|p' "$PANEL_XML" | sort -u)
+fi
+
 show_progress 1 $TOTAL_STEPS "$MSG_INSTALL"
 
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
@@ -362,6 +386,7 @@ fi
 show_progress 2 $TOTAL_STEPS "$MSG_INSTALL"
 show_progress 3 $TOTAL_STEPS "$MSG_OPTIMIZE"
 
+command -v fc-cache >/dev/null 2>&1 && sudo fc-cache -f >/dev/null 2>&1 || true
 restore_packagekit
 
 # ==========================================
@@ -648,6 +673,14 @@ if [[ "$IS_LIGHTDM" -eq 1 ]] && [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
             else
                 sudo sed -i "/^\[greeter\]/a user-background=false" "$GTK_CONF" 2>/dev/null || true
             fi
+            for kv in "theme-name=Adwaita" "icon-theme-name=Adwaita" "font-name=DejaVu Sans 11" "xft-antialias=true" "xft-hintstyle=hintslight" "xft-rgba=rgb" "position=50%,center" "hide-user-image=false" "default-user-image=#avatar-default" "indicators=~host;~spacer;~clock;~spacer;~session;~power"; do
+                key="${kv%%=*}"
+                if sudo grep -q "^${key}=" "$GTK_CONF" 2>/dev/null; then
+                    sudo sed -i "s|^${key}=.*|${kv}|" "$GTK_CONF" 2>/dev/null || true
+                else
+                    sudo sed -i "/^\[greeter\]/a ${kv}" "$GTK_CONF" 2>/dev/null || true
+                fi
+            done
         fi
 
         if [[ "$HAS_WEBKIT" -eq 1 ]]; then
