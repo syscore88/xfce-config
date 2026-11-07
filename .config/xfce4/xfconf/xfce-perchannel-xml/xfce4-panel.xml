@@ -23,7 +23,6 @@
         <value type="int" value="13"/>
         <value type="int" value="16"/>
         <value type="int" value="2"/>
-        <value type="int" value="19"/>
         <value type="int" value="6"/>
         <value type="int" value="20"/>
         <value type="int" value="8"/>
@@ -53,6 +52,7 @@
       <property name="middle-click" type="empty"/>
       <property name="square-icons" type="bool" value="true"/>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="nawiązano ethernetowe połączenie sieciowe „połączenie przewodowe 1”"/>
         <value type="string" value="seapplet"/>
         <value type="string" value="aplet networkmanager"/>
       </property>
@@ -188,7 +188,7 @@
     <property name="plugin-16" type="string" value="xfce4-notes-plugin"/>
     <property name="notes" type="empty">
       <property name="global" type="empty">
-        <property name="version" type="string" value="1.11.2"/>
+        <property name="version" type="string" value="1.12.0"/>
         <property name="background-color" type="string" value="#DAF188"/>
       </property>
     </property>
