@@ -33,8 +33,8 @@ The script identifies the OS using `/etc/os-release` (`ID` / `ID_LIKE`) and sele
 | **Debian / Ubuntu** | `apt` |
 | **openSUSE / SUSE** | `zypper` |
 | **Fedora / RHEL** | `dnf` |
-| **Void** | `xbps` | 
-| **NixOs** | `nix` | 
+| **Void** | `xbps` |
+| **NixOS** | `nix` |
 
 **Installed plugins:** `xfce4-cpugraph-plugin`, `xfce4-clipman-plugin`, `xfce4-netload-plugin`, `xfce4-mount-plugin`, `xfce4-diskperf-plugin`, `xfce4-notes-plugin`, `xfce4-genmon-plugin`, `xfce4-wavelan-plugin`, `xfce4-screensaver`.
 
@@ -62,35 +62,35 @@ The temporary sudo/polkit rule is removed, XFCE and thumbnail caches are cleared
 
 ---
 
- 🚀 How to Run
+## 🚀 How to Run
 
-1. Clone the repository or download the files
+**1. Clone the repository or download the files**
 ```bash
 git clone https://github.com/syscore88/xfce-config.git
 ```
 
-2. Enter the downloaded folder
+**2. Enter the downloaded folder**
 ```bash
 cd xfce-config
 ```
 
-3. Make the script executable
+**3. Make the script executable**
 ```bash
 chmod +x install.sh
 ```
 
-  For nixos
+**3.1. For NixOS**
 ```bash
 chmod +x nix.sh
 ```
 
-4. Run the script
+**4. Run the script**
 > ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 ```bash
 ./install.sh
 ```
 
-  For nixos
+**4.1. For NixOS**
 ```bash
 ./nix.sh
 ```
