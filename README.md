@@ -93,6 +93,8 @@ chmod +x nix.sh
 For nixos
 ```bash
 ./nix.sh
+```
+
 ---
 
 <img width="1280" height="800" alt="Screenshot_archlinux_2026-09-16_00:15:34" src="https://github.com/user-attachments/assets/2c33517a-7b7b-44da-984c-aa78cd178d84" />
