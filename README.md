@@ -79,12 +79,22 @@ cd xfce-config
 chmod +x install.sh
 ```
 
+For nixos
+```bash
+chmod +x nix.sh
+```
+
 4. Run the script
-⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
+> ⚠️ **IMPORTANT:** Run the script as a **regular user** (NOT as root/sudo). The script will ask for the administrator password at the start to configure temporary elevated privileges.
 ```bash
 ./install.sh
 ```
+
+For nixos
+```bash
+./nix.sh
 ---
+
 <img width="1280" height="800" alt="Screenshot_archlinux_2026-09-16_00:15:34" src="https://github.com/user-attachments/assets/2c33517a-7b7b-44da-984c-aa78cd178d84" />
 
 
