@@ -295,7 +295,7 @@ case "$DISTRO_ID" in
         wait_for_pkg_lock
         sudo xbps-install -Suy xbps || true
         PKG_INSTALL_CMD=(sudo xbps-install -y)
-        XFCE_PKGS=(dbus elogind polkit accountsservice NetworkManager btop xorg-minimal xrandr xf86-input-libinput mesa-dri xorg-server-xwayland xfce4-terminal fontconfig font-adobe-source-sans-pro font-util Liberation-fonts ttf-dejavu ttf-ubuntu-font-family font-awesome dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji xdg-user-dirs adwaita-icon-theme lightdm lightdm-gtk3-greeter xfce4 xfce4-plugins ffmpegthumbnailer tumbler poppler-glib thunar-archive-plugin thunar-media-tags-plugin thunar-volman mousepad ristretto atril engrampa gvfs gvfs-afc gvfs-smb udisks2 polkit-gnome "${XFCE_PKGS_COMMON[@]}")
+        XFCE_PKGS=(dbus elogind polkit accountsservice NetworkManager btop xorg-minimal xrandr xf86-input-libinput mesa-dri xorg-server-xwayland xfce4-terminal fontconfig font-adobe-source-sans-pro font-util Liberation-fonts ttf-dejavu ttf-ubuntu-font-family font-awesome dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji xdg-user-dirs adwaita-icon-theme lightdm lightdm-gtk3-greeter xfce4 xfce4-plugins ffmpegthumbnailer tumbler poppler-glib thunar-archive-plugin thunar-media-tags-plugin thunar-volman engrampa gvfs gvfs-afc gvfs-smb udisks2 polkit-gnome "${XFCE_PKGS_COMMON[@]}")
         ;;
     debian)
         wait_for_pkg_lock
