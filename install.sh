@@ -316,6 +316,7 @@ case "$DISTRO_ID" in
         XFCE_PKGS=()
         log_warn "Nierozpoznana dystrybucja ($DISTRO_ID) - pomijam instalację dodatkowych pakietów XFCE." \
                  "Unrecognized distribution ($DISTRO_ID) - skipping additional XFCE package installation."
+        FAILED_PACKAGES+=("${XFCE_PKGS_COMMON[@]}")
         ;;
 esac
 
@@ -323,20 +324,8 @@ if [[ ${#XFCE_PKGS[@]} -gt 0 ]]; then
     wait_for_pkg_lock
     for pkg in "${XFCE_PKGS[@]}"; do
         pkg_installed "$pkg" && continue
-        if ! "${PKG_INSTALL_CMD[@]}" "$pkg"; then
-            if [[ "$pkg" == *-plugin ]]; then
-                PLUGIN_ISSUES+=("$pkg")
-                _pick_msg "Nie udało się zainstalować pluginu: $pkg (dystrybucja: $DISTRO_ID)" \
-                          "Failed to install plugin: $pkg (distribution: $DISTRO_ID)"
-            else
-                FAILED_PACKAGES+=("$pkg")
-            fi
-        fi
+        "${PKG_INSTALL_CMD[@]}" "$pkg" || FAILED_PACKAGES+=("$pkg")
     done
-    if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
-        log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
-                 "Failed to install: ${FAILED_PACKAGES[*]}. Check the log: $LOG_FILE"
-    fi
 fi
 
 # ==========================================
@@ -724,6 +713,11 @@ clear_xfce_cache
 
 show_progress 6 $TOTAL_STEPS "$MSG_FINALIZE"
 printf '\n\n' >&3
+
+if [[ ${#FAILED_PACKAGES[@]} -gt 0 ]]; then
+    log_warn "Nie udało się zainstalować: ${FAILED_PACKAGES[*]}. Sprawdź log: $LOG_FILE" \
+             "Failed to install: ${FAILED_PACKAGES[*]}. Check the log: $LOG_FILE"
+fi
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
     echo -e "${SUCCESS}[OK] KONFIGURACJA ZAKOŃCZONA SUKCESEM!${NC}" >&3
