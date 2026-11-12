@@ -257,7 +257,7 @@ printf '\033[?7l' >&3
 # ==========================================
 disable_packagekit
 
-XFCE_PKGS_COMMON=(mousepad ristretto evince xfce4-whiskermenu-plugin xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver )
+XFCE_PKGS_COMMON=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver )
 
 detect_distro() {
     local id_like=""
