@@ -39,6 +39,8 @@ safe_copy_dir() {
 
 cleanup_on_exit() {
     local exit_code=$?
+    set +e
+    trap - ERR
     [ -n "${SUDO_KEEPALIVE_PID:-}" ] && kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
     printf '\033[?7h' >&3
     if [ "$exit_code" -ne 0 ]; then
@@ -54,10 +56,10 @@ cleanup_on_exit() {
     local do_reboot=0
     [ "$exit_code" -eq 0 ] && [ "${DO_REBOOT:-0}" = "1" ] && do_reboot=1
     if [ "${SUDO_READY:-0}" = "1" ]; then
-        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null; [ "$3" = 1 ] && systemctl reboot' _ \
+        sudo sh -c 'rm -f "$1" "$2"; systemctl try-restart polkit 2>/dev/null || true; if [ "$3" = 1 ]; then systemctl reboot 2>/dev/null || reboot; fi' _ \
             "${RUN0_NOPASSWD_FILE:-/etc/polkit-1/rules.d/51-run0-nopasswd.rules}" \
             "/etc/sudoers.d/99-temp-installer" \
-            "$do_reboot"
+            "$do_reboot" || true
     fi
 }
 trap cleanup_on_exit EXIT
@@ -65,7 +67,7 @@ trap cleanup_on_exit EXIT
 _pick_msg() { [[ "$SCRIPT_LANG" == "pl" ]] && echo "$1" || echo "$2"; }
 _log_write() {
     echo -e "$1"
-    echo -e "$1" >&3
+    printf '\r\033[K%b\n' "$1" >&3
     cp -f "$TMP_LOG" "$LOG_FILE" 2>/dev/null || true
 }
 log_info()  { local m; m="$(_pick_msg "$1" "$2")"; _log_write "${INFO}==> $m${NC}"; }
@@ -123,10 +125,13 @@ else
     MSG_FINALIZE="Finalizing..."
 fi
 
-TOTAL_STEPS=6
+TOTAL_STEPS=5
 
 CURRENT_USER=$(whoami)
 USER_PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")"
+if [[ -z "$USER_PICTURES_DIR" || "${USER_PICTURES_DIR%/}" == "${HOME%/}" ]]; then
+    USER_PICTURES_DIR="$HOME/Pictures"
+fi
 wallpaper_PATH="$USER_PICTURES_DIR/wallpaper.jpg"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -145,15 +150,16 @@ fi
 # ==========================================
 RUN0_NOPASSWD_FILE="/etc/polkit-1/rules.d/51-run0-nopasswd.rules"
 USE_RUN0=0
-if ! command -v visudo >/dev/null 2>&1; then
-    USE_RUN0=1
-elif command -v run0 >/dev/null 2>&1 && sudo --version 2>/dev/null | grep -qi "run0"; then
-    USE_RUN0=1
+if command -v run0 >/dev/null 2>&1; then
+    if ! command -v visudo >/dev/null 2>&1 || sudo --version 2>/dev/null | grep -qi "run0"; then
+        USE_RUN0=1
+    fi
 fi
 
 printf '\033[?7h' >&3
 SUDO_READY=0
 if [[ "$USE_RUN0" -eq 1 ]]; then
+    sudo mkdir -p "$(dirname "$RUN0_NOPASSWD_FILE")"
     sudo tee "$RUN0_NOPASSWD_FILE" > /dev/null <<POLKIT_RULE_EOF
 polkit.addRule(function(action, subject) {
     if (subject.user == "$CURRENT_USER") {
@@ -177,17 +183,19 @@ else
     ) &
     SUDO_KEEPALIVE_PID=$!
 
-    SUDOERS_TMP="$(mktemp)"
-    echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
-    if sudo visudo -cf "$SUDOERS_TMP" >/dev/null; then
-        sudo mkdir -p /etc/sudoers.d
-        sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
-    else
+    if command -v visudo >/dev/null 2>&1 && sudo grep -Eq '^[#@]includedir[[:space:]]+/etc/sudoers\.d' /etc/sudoers 2>/dev/null; then
+        SUDOERS_TMP="$(mktemp)"
+        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
+        if sudo visudo -cf "$SUDOERS_TMP" >/dev/null; then
+            sudo mkdir -p /etc/sudoers.d
+            sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/99-temp-installer
+        else
+            rm -f "$SUDOERS_TMP"
+            log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
+            exit 1
+        fi
         rm -f "$SUDOERS_TMP"
-        log_err "Nieprawidłowa składnia reguły sudoers - przerywam." "Invalid sudoers rule syntax - aborting."
-        exit 1
     fi
-    rm -f "$SUDOERS_TMP"
     SUDO_READY=1
 fi
 
@@ -208,31 +216,51 @@ if [[ ! -f "$NIXOS_CONF" ]]; then
 fi
 
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
-    cp -af "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
-    chmod 644 "$HOME/.face" 2>/dev/null || true
+    install -m 644 "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
 
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
     ACCOUNTS_FILE="/var/lib/AccountsService/users/$CURRENT_USER"
 
-    sudo mkdir -p /var/lib/AccountsService/icons/ /var/lib/AccountsService/users/ || true
-    sudo cp -f "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" || true
-    sudo chmod 644 "$AVATAR_DEST" || true
+    sudo mkdir -p /var/lib/AccountsService/icons /var/lib/AccountsService/users || true
+    sudo install -m 644 -o root -g root "$SCRIPT_DIR/piwo.png" "$AVATAR_DEST" || true
 
-    if [[ ! -f "$ACCOUNTS_FILE" ]]; then
-        echo -e "[User]\nIcon=$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null
+    if ! sudo test -f "$ACCOUNTS_FILE"; then
+        printf '[User]\nIcon=%s\n' "$AVATAR_DEST" | sudo tee "$ACCOUNTS_FILE" > /dev/null
     elif sudo grep -q "^Icon=" "$ACCOUNTS_FILE"; then
         sudo sed -i "s|^Icon=.*|Icon=$AVATAR_DEST|" "$ACCOUNTS_FILE" || true
+    elif sudo grep -q "^\[User\]" "$ACCOUNTS_FILE"; then
+        sudo sed -i "/^\[User\]/a Icon=$AVATAR_DEST" "$ACCOUNTS_FILE" || true
     else
-        echo "Icon=$AVATAR_DEST" | sudo tee -a "$ACCOUNTS_FILE" > /dev/null
+        printf '\n[User]\nIcon=%s\n' "$AVATAR_DEST" | sudo tee -a "$ACCOUNTS_FILE" > /dev/null
     fi
 
     sudo systemctl restart accounts-daemon 2>/dev/null || true
+    if command -v busctl >/dev/null 2>&1; then
+        busctl call org.freedesktop.Accounts \
+            "/org/freedesktop/Accounts/User$(id -u "$CURRENT_USER" 2>/dev/null || id -u)" \
+            org.freedesktop.Accounts.User SetIconFile s "$AVATAR_DEST" 2>/dev/null || true
+    fi
 fi
 
 LOGIN_WALLPAPER_NIX="# brak"
+HAS_LOGIN_WALLPAPER=0
 if [[ -f "$SCRIPT_DIR/login-wallpaper.png" ]]; then
     sudo install -m 644 -o root -g root "$SCRIPT_DIR/login-wallpaper.png" "$NIXOS_DIR/login-wallpaper.png"
-    LOGIN_WALLPAPER_NIX="services.xserver.displayManager.lightdm.background = lib.mkForce ./login-wallpaper.png;"
+    HAS_LOGIN_WALLPAPER=1
+    LOGIN_WALLPAPER_NIX='services.xserver.displayManager.lightdm.background =
+    lib.mkIf (config.services.xserver.displayManager.lightdm.enable or false) (lib.mkForce ./login-wallpaper.png);
+
+  services.xserver.displayManager.lightdm.greeters.slick.extraConfig =
+    lib.mkIf ((config.services.xserver.displayManager.lightdm.enable or false) && (config.services.xserver.displayManager.lightdm.greeters.slick.enable or false)) (lib.mkAfter '"''"'
+      background=${./login-wallpaper.png}
+      draw-user-backgrounds=false
+    '"''"');
+
+  services.xserver.displayManager.lightdm.greeters.gtk.extraConfig =
+    lib.mkIf ((config.services.xserver.displayManager.lightdm.enable or false) && (config.services.xserver.displayManager.lightdm.greeters.gtk.enable or false)) (lib.mkAfter '"''"'
+      background=${./login-wallpaper.png}
+      user-background=false
+    '"''"');'
 fi
 
 XFCE_MODULE_TMP="$(mktemp)"
@@ -242,25 +270,27 @@ cat > "$XFCE_MODULE_TMP" <<NIX_EOF
 let
   xfcePluginNames = [
     "xfce4-whiskermenu-plugin"
+    "xfce4-pulseaudio-plugin"
     "xfce4-cpugraph-plugin"
     "xfce4-clipman-plugin"
     "xfce4-netload-plugin"
     "xfce4-weather-plugin"
     "xfce4-mount-plugin"
     "xfce4-diskperf-plugin"
+    "xfce4-notes-plugin"
     "xfce4-genmon-plugin"
     "xfce4-screensaver"
   ];
   try = v: let r = builtins.tryEval v; in if r.success then r.value else null;
+  usable = p: (try (p != null && lib.isDerivation p && !(p.meta.broken or false))) == true;
   lookup = n:
     let
       top = try (pkgs.\${n} or null);
       sub = try (pkgs.xfce.\${n} or null);
     in
-      if lib.isDerivation top then top
-      else if lib.isDerivation sub then sub
+      if usable top then top
+      else if usable sub then sub
       else null;
-  usable = p: p != null && !(p.meta.broken or false);
 in
 {
   environment.systemPackages = lib.filter usable (map lookup xfcePluginNames);
@@ -273,13 +303,22 @@ sudo install -m 644 -o root -g root "$XFCE_MODULE_TMP" "$XFCE_MODULE"
 rm -f "$XFCE_MODULE_TMP"
 
 sudo cp -f "$NIXOS_CONF" "$NIXOS_CONF.bak"
-if ! sudo grep -q "xfce-visual.nix" "$NIXOS_CONF"; then
-    if sudo grep -q "\./hardware-configuration\.nix" "$NIXOS_CONF"; then
-        sudo sed -i 's|\./hardware-configuration\.nix|& ./xfce-visual.nix|' "$NIXOS_CONF"
-    else
+if ! sudo grep -Eq '^[[:space:]]*[^#]*xfce-visual\.nix' "$NIXOS_CONF"; then
+    if sudo grep -Eq '^[[:space:]]*[^#]*\./hardware-configuration\.nix' "$NIXOS_CONF"; then
+        sudo sed -i '/^[[:space:]]*#/! s|\./hardware-configuration\.nix|& ./xfce-visual.nix|' "$NIXOS_CONF"
+    fi
+    if ! sudo grep -Eq '^[[:space:]]*[^#]*xfce-visual\.nix' "$NIXOS_CONF"; then
+        sudo cp -f "$NIXOS_CONF.bak" "$NIXOS_CONF"
         log_err "Nie można dodać ./xfce-visual.nix do imports w $NIXOS_CONF - dodaj ręcznie." \
                 "Cannot add ./xfce-visual.nix to imports in $NIXOS_CONF - add it manually."
         exit 1
+    fi
+fi
+
+if [[ -d "$NIXOS_DIR/.git" ]] && command -v git >/dev/null 2>&1; then
+    sudo git -C "$NIXOS_DIR" add -N xfce-visual.nix 2>/dev/null || true
+    if [[ "$HAS_LOGIN_WALLPAPER" -eq 1 ]]; then
+        sudo git -C "$NIXOS_DIR" add -N login-wallpaper.png 2>/dev/null || true
     fi
 fi
 
@@ -307,13 +346,13 @@ stop_xfce_components() {
 
 stop_xfce_components
 
-safe_copy_dir "$SCRIPT_DIR/.config" ~/.config
-safe_copy_dir "$SCRIPT_DIR/.local" ~/.local
-safe_copy_dir "$SCRIPT_DIR/.icons" ~/.icons
-safe_copy_dir "$SCRIPT_DIR/.themes" ~/.themes
+safe_copy_dir "$SCRIPT_DIR/.config" "$HOME/.config"
+safe_copy_dir "$SCRIPT_DIR/.local" "$HOME/.local"
+safe_copy_dir "$SCRIPT_DIR/.icons" "$HOME/.icons"
+safe_copy_dir "$SCRIPT_DIR/.themes" "$HOME/.themes"
 
 if [[ -f "$SCRIPT_DIR/wallpaper.jpg" ]]; then
-    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null
+    mkdir -p "$(dirname "$wallpaper_PATH")" 2>/dev/null || true
     cp -af "$SCRIPT_DIR/wallpaper.jpg" "$wallpaper_PATH" 2>/dev/null || true
 fi
 
@@ -328,7 +367,7 @@ if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
     SESSION_PID=$(pgrep -u "$CURRENT_USER" xfce4-session | head -n 1 || true)
     if [[ -n "$SESSION_PID" ]]; then
         DBUS_ADDR_FROM_ENVIRON="$(grep -z DBUS_SESSION_BUS_ADDRESS "/proc/$SESSION_PID/environ" 2>/dev/null | tr '\0' '\n' | grep ^DBUS_SESSION_BUS_ADDRESS= | cut -d= -f2- || true)"
-        export DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR_FROM_ENVIRON"
+        [[ -n "$DBUS_ADDR_FROM_ENVIRON" ]] && export DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR_FROM_ENVIRON"
     fi
 fi
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
@@ -350,7 +389,16 @@ if [[ "$USE_XFCONF" -eq 1 ]]; then
 
     ALL_PROPS=("${EXISTING_PROPS[@]}")
 
-    for mon in monitordefault monitor0 monitor1 monitor2 monitor3 monitor4 monitorHDMI-1 monitorHDMI-2 monitorHDMI-A-1 monitorHDMI-A-2 monitoreDP-1 monitoreDP-2 monitorDP-1 monitorDP-2 monitorDP-3 monitorVGA-1 monitorVirtual-1 monitorXWAYLAND0; do
+    TARGET_MONITORS=(monitordefault monitor0)
+    if command -v xrandr >/dev/null 2>&1; then
+        while IFS= read -r out; do
+            if [[ -n "$out" ]]; then
+                TARGET_MONITORS+=("monitor$out" "$out")
+            fi
+        done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}' || true)
+    fi
+
+    for mon in "${TARGET_MONITORS[@]}"; do
         for ws in workspace0 workspace1 workspace2 workspace3; do
             ALL_PROPS+=("/backdrop/screen0/$mon/$ws/last-image")
             ALL_PROPS+=("/backdrop/screen0/$mon/$ws/image-path")
@@ -361,30 +409,9 @@ if [[ "$USE_XFCONF" -eq 1 ]]; then
         ALL_PROPS+=("/backdrop/screen0/$mon/last-single-image")
     done
 
-    if command -v xrandr >/dev/null 2>&1; then
-        while IFS= read -r out; do
-            if [[ -n "$out" ]]; then
-                for ws in workspace0 workspace1 workspace2 workspace3; do
-                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/last-image")
-                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/image-path")
-                    ALL_PROPS+=("/backdrop/screen0/monitor$out/$ws/last-single-image")
-                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/last-image")
-                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/image-path")
-                    ALL_PROPS+=("/backdrop/screen0/$out/$ws/last-single-image")
-                done
-                ALL_PROPS+=("/backdrop/screen0/monitor$out/last-image")
-                ALL_PROPS+=("/backdrop/screen0/monitor$out/image-path")
-                ALL_PROPS+=("/backdrop/screen0/monitor$out/last-single-image")
-                ALL_PROPS+=("/backdrop/screen0/$out/last-image")
-                ALL_PROPS+=("/backdrop/screen0/$out/image-path")
-                ALL_PROPS+=("/backdrop/screen0/$out/last-single-image")
-            fi
-        done < <(xrandr --query 2>/dev/null | awk '/ connected/{print $1}')
-    fi
-
     mapfile -t ALL_PROPS < <(printf '%s\n' "${ALL_PROPS[@]}" | sort -u)
 
-    rm -rf ~/.cache/xfce4/desktop 2>/dev/null || true
+    rm -rf "$HOME/.cache/xfce4/desktop" 2>/dev/null || true
 
     for prop in "${ALL_PROPS[@]}"; do
         [[ -z "$prop" ]] && continue
@@ -405,16 +432,10 @@ if [[ "$USE_XFCONF" -eq 1 ]]; then
                 || timeout 3 xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
         fi
     done
-
-    if command -v xfdesktop >/dev/null 2>&1; then
-        timeout 3 xfdesktop --reload 2>/dev/null || {
-            pkill -u "$CURRENT_USER" -x xfdesktop 2>/dev/null || true
-            sleep 0.5
-            nohup xfdesktop >/dev/null 2>&1 &
-            disown
-        }
-    fi
 fi
+
+pkill -TERM -u "$CURRENT_USER" -x xfconfd 2>/dev/null || true
+sleep 0.5
 
 XFCE_DESKTOP_XML="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
 mkdir -p "$(dirname "$XFCE_DESKTOP_XML")"
@@ -447,9 +468,9 @@ if [[ ! -f "$XFCE_DESKTOP_XML" ]] || ! grep -q "last-image" "$XFCE_DESKTOP_XML" 
 </channel>
 EOF
 else
-    sed -i -E 's|name="last-image" type="string" value="[^"]+"|name="last-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
-    sed -i -E 's|name="image-path" type="string" value="[^"]+"|name="image-path" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
-    sed -i -E 's|name="last-single-image" type="string" value="[^"]+"|name="last-single-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
+    sed -i -E 's|name="last-image" type="string" value="[^"]*"|name="last-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
+    sed -i -E 's|name="image-path" type="string" value="[^"]*"|name="image-path" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
+    sed -i -E 's|name="last-single-image" type="string" value="[^"]*"|name="last-single-image" type="string" value="'"$wallpaper_PATH"'"|g' "$XFCE_DESKTOP_XML" || true
 fi
 
 show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
@@ -472,8 +493,7 @@ clear_xfce_cache() {
 }
 clear_xfce_cache
 
-show_progress 5 $TOTAL_STEPS "$MSG_OPTIMIZE"
-show_progress 6 $TOTAL_STEPS "$MSG_FINALIZE"
+show_progress 5 $TOTAL_STEPS "$MSG_FINALIZE"
 printf '\n\n' >&3
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
