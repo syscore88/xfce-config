@@ -274,8 +274,6 @@ show_progress 0 $TOTAL_STEPS "$MSG_PREP"
 # ==========================================
 disable_packagekit
 
-XFCE_PKGS_COMMON=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
-
 detect_distro() {
     local id_like=""
     if [[ -f /etc/os-release ]]; then
@@ -313,13 +311,13 @@ case "$DISTRO_ID" in
         wait_for_pkg_lock
         sudo xbps-install -Suy xbps || true
         PKG_INSTALL_CMD=(sudo xbps-install -y)
-        XFCE_PKGS=(dbus elogind polkit accountsservice NetworkManager network-manager-applet btop xorg-minimal xrandr xf86-input-libinput mesa-dri xorg-server-xwayland xfce4-terminal fontconfig font-adobe-source-sans-pro font-util liberation-fonts-ttf ttf-ubuntu-font-family font-awesome dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji xdg-user-dirs adwaita-icon-theme lightdm lightdm-gtk3-greeter xfce4 xfce4-plugins ffmpegthumbnailer tumbler poppler-glib thunar-archive-plugin thunar-media-tags-plugin thunar-volman engrampa gvfs gvfs-afc gvfs-smb udisks2 polkit-gnome "${XFCE_PKGS_COMMON[@]}")
+        XFCE_PKGS=(dbus elogind polkit accountsservice NetworkManager network-manager-applet btop xorg-minimal xrandr xf86-input-libinput mesa-dri xorg-server-xwayland xfce4-terminal fontconfig font-adobe-source-sans-pro font-util liberation-fonts-ttf ttf-ubuntu-font-family font-awesome dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji xdg-user-dirs adwaita-icon-theme lightdm lightdm-gtk3-greeter xfce4 xfce4-plugins ffmpegthumbnailer tumbler poppler-glib thunar-archive-plugin thunar-media-tags-plugin thunar-volman engrampa gvfs gvfs-afc gvfs-smb udisks2 polkit-gnome mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
     debian)
         wait_for_pkg_lock
         sudo apt-get update -yq >/dev/null 2>&1 || true
         PKG_INSTALL_CMD=(sudo apt-get install -yq)
-        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        XFCE_PKGS=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
     opensuse)
         PKG_INSTALL_CMD=(sudo zypper -nq install -y)
@@ -327,14 +325,14 @@ case "$DISTRO_ID" in
         ;;
     fedora)
         PKG_INSTALL_CMD=(sudo dnf install -yq)
-        XFCE_PKGS=("${XFCE_PKGS_COMMON[@]}")
+        XFCE_PKGS=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
     *)
         PKG_INSTALL_CMD=()
         XFCE_PKGS=()
         log_warn "Nierozpoznana dystrybucja ($DISTRO_ID) - pomijam instalację dodatkowych pakietów XFCE." \
                  "Unrecognized distribution ($DISTRO_ID) - skipping additional XFCE package installation."
-        FAILED_PACKAGES+=("${XFCE_PKGS_COMMON[@]}")
+        FAILED_PACKAGES+=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
 esac
 
