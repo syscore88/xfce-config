@@ -176,15 +176,15 @@ show_progress() {
 }
 
 if [[ "$SCRIPT_LANG" == "pl" ]]; then
-    MSG_PREP="Przygotowywanie..."
-    MSG_INSTALL="Instalacja..."
-    MSG_OPTIMIZE="Optymalizacja..."
-    MSG_FINALIZE="Finalizowanie..."
+    MSG_PREP="[1/4] Przygotowywanie..."
+    MSG_INSTALL="[2/4] Instalacja..."
+    MSG_OPTIMIZE="[3/4] Optymalizacja..."
+    MSG_FINALIZE="[4/4] Finalizowanie..."
 else
-    MSG_PREP="Preparing..."
-    MSG_INSTALL="Installation..."
-    MSG_OPTIMIZE="Optimization..."
-    MSG_FINALIZE="Finalizing..."
+    MSG_PREP="[1/4] Preparing..."
+    MSG_INSTALL="[2/4] Installation..."
+    MSG_OPTIMIZE="[3/4] Optimization..."
+    MSG_FINALIZE="[4/4] Finalizing..."
 fi
 
 TOTAL_STEPS=7
