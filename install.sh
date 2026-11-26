@@ -317,15 +317,15 @@ case "$DISTRO_ID" in
         wait_for_pkg_lock
         sudo apt-get update -yq >/dev/null 2>&1 || true
         PKG_INSTALL_CMD=(sudo apt-get install -yq)
-        XFCE_PKGS=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
+        XFCE_PKGS=(accountsservice mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
     opensuse)
         PKG_INSTALL_CMD=(sudo zypper -nq install -y)
-        XFCE_PKGS=(mousepad ristretto evince pulseaudio-utils rtkit xfce4-power-manager xfce4-notifyd xfce4-screensaver xfce4-panel-plugin-whiskermenu xfce4-panel-plugin-pulseaudio xfce4-panel-plugin-cpugraph xfce4-panel-plugin-clipman xfce4-panel-plugin-netload xfce4-panel-plugin-weather xfce4-panel-plugin-mount xfce4-panel-plugin-diskperf xfce4-panel-plugin-notes xfce4-panel-plugin-genmon)
+        XFCE_PKGS=(accountsservice mousepad ristretto evince pulseaudio-utils rtkit xfce4-power-manager xfce4-notifyd xfce4-screensaver xfce4-panel-plugin-whiskermenu xfce4-panel-plugin-pulseaudio xfce4-panel-plugin-cpugraph xfce4-panel-plugin-clipman xfce4-panel-plugin-netload xfce4-panel-plugin-weather xfce4-panel-plugin-mount xfce4-panel-plugin-diskperf xfce4-panel-plugin-notes xfce4-panel-plugin-genmon)
         ;;
     fedora)
         PKG_INSTALL_CMD=(sudo dnf install -yq)
-        XFCE_PKGS=(mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
+        XFCE_PKGS=(accountsservice mousepad ristretto evince xfce4-whiskermenu-plugin pulseaudio-utils rtkit xfce4-pulseaudio-plugin xfce4-power-manager xfce4-notifyd xfce4-cpugraph-plugin xfce4-clipman-plugin xfce4-netload-plugin xfce4-weather-plugin xfce4-mount-plugin xfce4-diskperf-plugin xfce4-notes-plugin xfce4-genmon-plugin xfce4-screensaver)
         ;;
     *)
         PKG_INSTALL_CMD=()
@@ -520,8 +520,6 @@ show_progress 4 $TOTAL_STEPS "$MSG_OPTIMIZE"
 # 5. USTAWIENIE AWATARA UŻYTKOWNIKA
 # ==========================================
 if [[ -f "$SCRIPT_DIR/piwo.png" ]]; then
-    install -m 644 "$SCRIPT_DIR/piwo.png" "$HOME/.face" 2>/dev/null || true
-
     AVATAR_DEST="/var/lib/AccountsService/icons/$CURRENT_USER"
     ACCOUNTS_FILE="/var/lib/AccountsService/users/$CURRENT_USER"
 
